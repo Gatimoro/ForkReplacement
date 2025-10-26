@@ -1,9 +1,10 @@
+#!/usr/bin/env python3
 """
 Discord Bot for Restaurant Reservation Management
 Channels:
-- #reservas-confirmadas: Shows confirmed reservations with cancel button
-- #pendientes-aprobacion: Shows pending restaurant approval with accept button
-- #log-acciones: Action log for last month
+- #reservas-confirmadas: Shows confirmed reservations with cancel & call buttons
+- #pendientes-aprobacion: Shows pending restaurant approval with accept, cancel & call buttons
+- #log-acciones: Action log for tracking all actions
 """
 
 import discord
@@ -11,8 +12,7 @@ from discord.ext import commands, tasks
 from discord.ui import Button, View
 import sqlite3
 import os
-import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from contextlib import contextmanager
 from collections import defaultdict
 from dotenv import load_dotenv
@@ -30,64 +30,6 @@ logger = logging.getLogger(__name__)
 
 # Bot setup
 intents = discord.Intents.default()
-
-async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            # Get reservation
-            cursor.execute('SELECT * FROM reservations WHERE id = ?', (self.reservation_id,))
-            res = cursor.fetchone()
-            
-            if not res:
-                await interaction.followup.send("âŒ Reserva no encontrada", ephemeral=True)
-                return
-            
-            if res['cancelled']:
-                await interaction.followup.send("âš ï¸ Esta reserva ya estÃ¡ cancelada", ephemeral=True)
-                return
-            
-            # Mark as cancelled
-            cursor.execute('''
-                UPDATE reservations 
-                SET cancelled = 1, 
-                    cancelled_at = CURRENT_TIMESTAMP,
-                    cancelled_by = ?
-                WHERE id = ?
-            ''', (str(interaction.user), self.reservation_id))
-            conn.commit()
-            
-            # Log action
-            await log_action(
-                self.reservation_id,
-                'cancelled',
-                str(interaction.user),
-                self.reason.value or "Sin motivo especificado"
-            )
-            
-            # Send SMS to customer
-            message = (
-                f"Hola {res['nombre']}, "
-                f"lamentamos informarte que tu reserva para {res['personas']} personas "
-                f"el {res['fecha']} a las {res['hora']} ha sido cancelada. "
-                f"Por favor, contÃ¡ctanos al 965 78 57 31. - Les Monges"
-            )
-            send_sms(res['telefono'], message)
-            
-            # Delete the message immediately
-            try:
-                await interaction.message.delete()
-            except:
-                pass  # Message might already be deleted
-            
-            await interaction.followup.send(
-                f"âœ… Reserva #{self.reservation_id} cancelada y cliente notificado por SMS",
-                ephemeral=True
-            )#!/usr/bin/env python3
-# Bot setup
-intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
@@ -98,6 +40,7 @@ DB_PATH = 'reservations.db'
 # Channel IDs (set these after creating channels)
 CONFIRMED_CHANNEL_ID = int(os.getenv('CONFIRMED_CHANNEL_ID', '0'))
 PENDING_CHANNEL_ID = int(os.getenv('PENDING_CHANNEL_ID', '0'))
+TODAY_CHANNEL_ID = int(os.getenv('TODAY_CHANNEL_ID', '0'))
 LOG_CHANNEL_ID = int(os.getenv('LOG_CHANNEL_ID', '0'))
 
 @contextmanager
@@ -111,12 +54,16 @@ def get_db():
         conn.close()
 
 def send_sms(phone, message):
-    """Send SMS (import from app.py or duplicate the function)"""
-    # TODO: Import from app.py or duplicate SMS logic
+    """Send SMS (import from app.py)"""
     import sys
     sys.path.append('.')
     from app import send_sms as app_send_sms
     return app_send_sms(phone, message)
+
+def format_date_spanish(fecha_str):
+    """Convert YYYY-MM-DD to DD/MM/YYYY for display"""
+    fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
+    return fecha_obj.strftime('%d/%m/%Y')
 
 async def log_action(reservation_id, action_type, performed_by, details=None):
     """Log action to database and Discord"""
@@ -139,27 +86,46 @@ async def log_action(reservation_id, action_type, performed_by, details=None):
                 res = cursor.fetchone()
             
             if res:
+                fecha_display = format_date_spanish(res['fecha'])
+                
                 embed = discord.Embed(
-                    title=f"ðŸ“ {action_type.upper()}",
+                    title=f"📝 {action_type.upper()}",
                     color=discord.Color.blue() if action_type == 'confirmed' else discord.Color.red(),
                     timestamp=datetime.utcnow()
                 )
                 embed.add_field(name="ID", value=str(reservation_id), inline=True)
                 embed.add_field(name="Nombre", value=res['nombre'], inline=True)
                 embed.add_field(name="Personas", value=str(res['personas']), inline=True)
-                embed.add_field(name="Fecha/Hora", value=f"{res['fecha']} {res['hora']}", inline=False)
+                embed.add_field(name="Fecha/Hora", value=f"{fecha_display} {res['hora']}", inline=False)
                 embed.add_field(name="Realizado por", value=performed_by, inline=False)
                 if details:
                     embed.add_field(name="Detalles", value=details, inline=False)
                 
                 await channel.send(embed=embed)
 
+class CallButton(Button):
+    """Call button to display phone number"""
+    def __init__(self, phone_number):
+        super().__init__(
+            style=discord.ButtonStyle.primary,
+            label="📞 Llamar",
+            custom_id=f"call_{phone_number}"
+        )
+        self.phone_number = phone_number
+    
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message(
+            f"📞 Teléfono: **{self.phone_number}**\n\n"
+            f"_Puedes llamar directamente a este número_",
+            ephemeral=True
+        )
+
 class ConfirmButton(Button):
     """Accept button for pending reservations"""
     def __init__(self, reservation_id):
         super().__init__(
             style=discord.ButtonStyle.success,
-            label="âœ… Aceptar Reserva",
+            label="✅ Aceptar",
             custom_id=f"confirm_{reservation_id}"
         )
         self.reservation_id = reservation_id
@@ -175,17 +141,18 @@ class ConfirmButton(Button):
             res = cursor.fetchone()
             
             if not res:
-                await interaction.followup.send("âŒ Reserva no encontrada", ephemeral=True)
+                await interaction.followup.send("❌ Reserva no encontrada", ephemeral=True)
                 return
             
             if res['restaurant_confirmed']:
-                await interaction.followup.send("âš ï¸ Esta reserva ya estÃ¡ confirmada", ephemeral=True)
+                await interaction.followup.send("⚠️ Esta reserva ya está confirmada", ephemeral=True)
                 return
             
             # Update to confirmed
             cursor.execute('''
                 UPDATE reservations 
-                SET restaurant_confirmed = 1, restaurant_confirmed_at = CURRENT_TIMESTAMP
+                SET restaurant_confirmed = 1, 
+                    status = 'confirmed'
                 WHERE id = ?
             ''', (self.reservation_id,))
             conn.commit()
@@ -198,31 +165,37 @@ class ConfirmButton(Button):
                 f"Confirmado por {interaction.user.name}"
             )
             
+            # Format date for SMS
+            fecha_display = format_date_spanish(res['fecha'])
+            
             # Send SMS to customer
             message = (
-                f"Â¡Buenas noticias {res['nombre']}! "
-                f"Tu reserva para {res['personas']} personas el {res['fecha']} "
-                f"a las {res['hora']} estÃ¡ CONFIRMADA. Â¡Te esperamos! - Les Monges"
+                f"¡Buenas noticias {res['nombre']}! "
+                f"Tu reserva para {res['personas']} personas el {fecha_display} "
+                f"a las {res['hora']} está CONFIRMADA. ¡Te esperamos! - Les Monges"
             )
             send_sms(res['telefono'], message)
             
-            # Delete the message immediately
+            # Delete the message from pending channel
             try:
                 await interaction.message.delete()
             except:
-                pass  # Message might already be deleted
+                pass
+            
+            # Sync channels to show in confirmed
+            await sync_all_channels()
             
             await interaction.followup.send(
-                f"âœ… Reserva #{self.reservation_id} confirmada y cliente notificado por SMS",
+                f"✅ Reserva #{self.reservation_id} confirmada y cliente notificado por SMS",
                 ephemeral=True
             )
 
 class CancelButton(Button):
-    """Cancel button for confirmed reservations"""
+    """Cancel button for reservations"""
     def __init__(self, reservation_id):
         super().__init__(
             style=discord.ButtonStyle.danger,
-            label="âŒ Cancelar",
+            label="❌ Cancelar",
             custom_id=f"cancel_{reservation_id}"
         )
         self.reservation_id = reservation_id
@@ -231,13 +204,13 @@ class CancelButton(Button):
         # Create confirmation modal
         await interaction.response.send_modal(CancelModal(self.reservation_id))
 
-class CancelModal(discord.ui.Modal, title="Confirmar CancelaciÃ³n"):
+class CancelModal(discord.ui.Modal, title="Confirmar Cancelación"):
     """Modal to confirm cancellation"""
     reason = discord.ui.TextInput(
         label="Motivo (opcional)",
         style=discord.TextStyle.paragraph,
         required=False,
-        placeholder="Ej: Cliente cancelÃ³, mesa no disponible..."
+        placeholder="Ej: Cliente canceló, mesa no disponible..."
     )
     
     def __init__(self, reservation_id):
@@ -255,11 +228,11 @@ class CancelModal(discord.ui.Modal, title="Confirmar CancelaciÃ³n"):
             res = cursor.fetchone()
             
             if not res:
-                await interaction.followup.send("âŒ Reserva no encontrada", ephemeral=True)
+                await interaction.followup.send("❌ Reserva no encontrada", ephemeral=True)
                 return
             
             if res['cancelled']:
-                await interaction.followup.send("âš ï¸ Esta reserva ya estÃ¡ cancelada", ephemeral=True)
+                await interaction.followup.send("⚠️ Esta reserva ya está cancelada", ephemeral=True)
                 return
             
             # Mark as cancelled
@@ -280,71 +253,58 @@ class CancelModal(discord.ui.Modal, title="Confirmar CancelaciÃ³n"):
                 self.reason.value or "Sin motivo especificado"
             )
             
+            # Format date for SMS
+            fecha_display = format_date_spanish(res['fecha'])
+            
             # Send SMS to customer
             message = (
                 f"Hola {res['nombre']}, "
                 f"lamentamos informarte que tu reserva para {res['personas']} personas "
-                f"el {res['fecha']} a las {res['hora']} ha sido cancelada. "
-                f"Por favor, contÃ¡ctanos al 965 78 57 31. - Les Monges"
+                f"el {fecha_display} a las {res['hora']} ha sido cancelada. "
+                f"Por favor, contáctanos al 965 78 57 31. - Les Monges"
             )
             send_sms(res['telefono'], message)
             
-            # Sync channels to update display
-            await sync_all_channels()
+            # Delete the message immediately
+            try:
+                await interaction.message.delete()
+            except:
+                pass
             
             await interaction.followup.send(
-                f"âœ… Reserva #{self.reservation_id} cancelada y cliente notificado por SMS",
+                f"✅ Reserva #{self.reservation_id} cancelada y cliente notificado por SMS",
                 ephemeral=True
             )
 
 def create_reservation_embed(res, status_type):
-    """Create Discord embed for a reservation"""
+    """Create Discord embed for a reservation - SIMPLIFIED"""
     # Determine color based on status
     if status_type == 'confirmed':
         color = discord.Color.green()
-        title = "âœ… Reserva Confirmada"
+        icon = "✅"
     elif status_type == 'pending':
         color = discord.Color.orange()
-        title = "â³ Pendiente de AprobaciÃ³n"
+        icon = "⏳"
     else:
-        color = discord.Color.red()
-        title = "âŒ Cancelada"
+        color = discord.Color.blue()
+        icon = "📅"
     
     embed = discord.Embed(
-        title=f"{title} - ID #{res['id']}",
-        color=color,
-        timestamp=datetime.fromisoformat(res['created_at'])
+        title=f"{icon} {res['hora']} · {res['nombre']} · {res['personas']}p",
+        color=color
     )
     
-    # Main info
-    embed.add_field(name="ðŸ‘¤ Nombre", value=res['nombre'], inline=True)
-    embed.add_field(name="ðŸ“ž TelÃ©fono", value=res['telefono'], inline=True)
-    embed.add_field(name="ðŸ‘¥ Personas", value=str(res['personas']), inline=True)
+    # Optional: Add phone in footer for quick reference
+    embed.set_footer(text=f"📞 {res['telefono']} • ID #{res['id']}")
     
-    # Date/Time
-    embed.add_field(name="ðŸ“… Fecha", value=res['fecha'], inline=True)
-    embed.add_field(name="ðŸ• Hora", value=res['hora'], inline=True)
-    embed.add_field(name="â° Creada", value=res['created_at'], inline=True)
-    
-    # Confirmation status
-    user_check = "âœ…" if res['user_confirmed'] else "âŒ"
-    restaurant_check = "âœ…" if res['restaurant_confirmed'] else "âŒ"
-    embed.add_field(
-        name="ðŸ“Š Estado",
-        value=f"Cliente: {user_check}\nRestaurante: {restaurant_check}",
-        inline=False
-    )
-    
+    # Add notes if present
     if res['notes']:
-        embed.add_field(name="ðŸ“ Notas", value=res['notes'], inline=False)
+        embed.description = f"📝 {res['notes']}"
     
     return embed
 
 async def get_channel_state(channel_id):
-    """
-    Get current state of a channel
-    Returns: dict with date -> list of reservation IDs
-    """
+    """Get current state of a channel - returns dict with date -> list of reservation IDs"""
     channel = bot.get_channel(channel_id)
     if not channel:
         return None
@@ -353,29 +313,30 @@ async def get_channel_state(channel_id):
     current_date = None
     
     async for message in channel.history(limit=200, oldest_first=True):
-        # Check if it's a date header
-        if message.embeds and message.embeds[0].title and message.embeds[0].title.startswith("ðŸ“…"):
-            # Extract date from header (parse it back)
-            # We'll use a simpler approach: just track which reservation IDs we see
+        # Check if it's a date header (NEW format: ═══ Lunes · 23 ═══)
+        if message.embeds and message.embeds[0].title and "═══" in message.embeds[0].title:
             current_date = message.embeds[0].title
             current_state[current_date] = []
-        # Check if it's a reservation card
-        elif message.embeds and message.embeds[0].title and "ID #" in message.embeds[0].title:
-            # Extract reservation ID from title
+        # Check if it's a TODAY header
+        elif message.embeds and message.embeds[0].title and "🌟" in message.embeds[0].title:
+            current_date = message.embeds[0].title
+            current_state[current_date] = []
+        # Check if it's a reservation card (NEW format: ID in footer)
+        elif message.embeds and message.embeds[0].footer and message.embeds[0].footer.text:
+            # Extract ID from footer: "📞 +34... • ID #5"
             try:
-                res_id = int(message.embeds[0].title.split("#")[1].split()[0])
-                if current_date:
-                    current_state[current_date].append(res_id)
+                footer_text = message.embeds[0].footer.text
+                if "ID #" in footer_text:
+                    res_id = int(footer_text.split("ID #")[1].split()[0])
+                    if current_date:
+                        current_state[current_date].append(res_id)
             except:
                 pass
     
     return current_state
 
 async def get_database_state(status_type):
-    """
-    Get what the channel SHOULD look like based on database
-    Returns: dict with date string -> list of reservation IDs
-    """
+    """Get what the channel SHOULD look like based on database"""
     with get_db() as conn:
         cursor = conn.cursor()
         
@@ -396,6 +357,15 @@ async def get_database_state(status_type):
                 AND cancelled = 0
                 ORDER BY fecha, hora
             '''
+        elif status_type == 'today':
+            query = '''
+                SELECT * FROM reservations 
+                WHERE user_confirmed = 1 
+                AND restaurant_confirmed = 1 
+                AND cancelled = 0
+                AND date(fecha) = date('now')
+                ORDER BY hora
+            '''
         else:
             return None
         
@@ -404,16 +374,37 @@ async def get_database_state(status_type):
         
         # Group by date
         db_state = defaultdict(list)
+        
+        # Special handling for TODAY channel
+        if status_type == 'today':
+            if reservations:
+                # Create the big TODAY header
+                today = datetime.now()
+                weekdays = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO']
+                months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+                
+                weekday = weekdays[today.weekday()]
+                day = today.day
+                month = months[today.month - 1]
+                
+                date_header = f"🌟 {weekday} {day} DE {month.upper()} 🌟"
+                db_state[date_header] = [res['id'] for res in reservations]
+            return dict(db_state)
+        
+        # For confirmed/pending channels
         for res in reservations:
             fecha_obj = datetime.strptime(res['fecha'], '%Y-%m-%d')
-            weekdays = ['Lunes', 'Martes', 'MiÃ©rcoles', 'Jueves', 'Viernes', 'SÃ¡bado', 'Domingo']
-            months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+            weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+            months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+                     'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
             
             weekday = weekdays[fecha_obj.weekday()]
             day = fecha_obj.day
             month = months[fecha_obj.month - 1]
-            date_header = f"ðŸ“… {weekday}, {day} de {month}"
+            
+            # MUST match the format in sync_channel_with_headers EXACTLY
+            date_header = f"═══ {weekday} · {day:02d} {month} ═══"
             
             db_state[date_header].append(res['id'])
         
@@ -424,11 +415,9 @@ def states_match(channel_state, db_state):
     if channel_state is None or db_state is None:
         return False
     
-    # Check if same dates
     if set(channel_state.keys()) != set(db_state.keys()):
         return False
     
-    # Check if same reservations per date
     for date_header in db_state:
         channel_ids = set(channel_state.get(date_header, []))
         db_ids = set(db_state[date_header])
@@ -439,7 +428,6 @@ def states_match(channel_state, db_state):
 
 async def sync_channel_with_headers(channel_id, status_type):
     """Sync a specific channel with database, only if needed"""
-    # Check if sync is needed
     channel_state = await get_channel_state(channel_id)
     db_state = await get_database_state(status_type)
     
@@ -476,6 +464,15 @@ async def sync_channel_with_headers(channel_id, status_type):
                 AND cancelled = 0
                 ORDER BY fecha, hora
             '''
+        elif status_type == 'today':
+            query = '''
+                SELECT * FROM reservations 
+                WHERE user_confirmed = 1 
+                AND restaurant_confirmed = 1 
+                AND cancelled = 0
+                AND date(fecha) = date('now')
+                ORDER BY hora
+            '''
         else:
             return
         
@@ -483,10 +480,40 @@ async def sync_channel_with_headers(channel_id, status_type):
         reservations = cursor.fetchall()
         
         if not reservations:
-            await channel.send("ðŸ“­ No hay reservas en este momento")
+            await channel.send("🔭 No hay reservas en este momento")
             return
         
-        # Group reservations by date
+        # Special header for TODAY channel
+        if status_type == 'today':
+            today = datetime.now()
+            weekdays = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO']
+            months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+            
+            weekday = weekdays[today.weekday()]
+            day = today.day
+            month = months[today.month - 1]
+            
+            # BIG TODAY HEADER
+            header_embed = discord.Embed(
+                title=f"🌟 {weekday} {day} DE {month.upper()} 🌟",
+                description=f"Total: {len(reservations)} reservas hoy",
+                color=discord.Color.gold()
+            )
+            await channel.send(embed=header_embed)
+            
+            # Post all today's reservations
+            for res in reservations:
+                embed = create_reservation_embed(res, 'today')
+                view = View(timeout=None)
+                view.add_item(CallButton(res['telefono']))
+                view.add_item(CancelButton(res['id']))
+                
+                await channel.send(embed=embed, view=view)
+            
+            return
+        
+        # Group reservations by date for confirmed/pending channels
         reservations_by_date = defaultdict(list)
         for res in reservations:
             reservations_by_date[res['fecha']].append(res)
@@ -495,17 +522,17 @@ async def sync_channel_with_headers(channel_id, status_type):
         for fecha in sorted(reservations_by_date.keys()):
             fecha_obj = datetime.strptime(fecha, '%Y-%m-%d')
             
-            weekdays = ['Lunes', 'Martes', 'MiÃ©rcoles', 'Jueves', 'Viernes', 'SÃ¡bado', 'Domingo']
-            months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+            weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+            months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+                     'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
             
             weekday = weekdays[fecha_obj.weekday()]
             day = fecha_obj.day
             month = months[fecha_obj.month - 1]
             
-            # Create date header
+            # Create aesthetic date header
             header_embed = discord.Embed(
-                title=f"ðŸ“… {weekday}, {day} de {month}",
+                title=f"═══ {weekday} · {day:02d} {month} ═══",
                 color=discord.Color.blue()
             )
             await channel.send(embed=header_embed)
@@ -515,10 +542,13 @@ async def sync_channel_with_headers(channel_id, status_type):
                 embed = create_reservation_embed(res, status_type)
                 view = View(timeout=None)
                 
+                # Add buttons based on channel type
                 if status_type == 'confirmed':
+                    view.add_item(CallButton(res['telefono']))
                     view.add_item(CancelButton(res['id']))
                 elif status_type == 'pending':
                     view.add_item(ConfirmButton(res['id']))
+                    view.add_item(CallButton(res['telefono']))
                     view.add_item(CancelButton(res['id']))
                 
                 message = await channel.send(embed=embed, view=view)
@@ -527,30 +557,25 @@ async def sync_channel_with_headers(channel_id, status_type):
                 with get_db() as conn2:
                     cursor2 = conn2.cursor()
                     cursor2.execute('''
-                        INSERT INTO discord_messages (reservation_id, channel_type, message_id)
+                        INSERT OR REPLACE INTO discord_messages (reservation_id, channel_type, message_id)
                         VALUES (?, ?, ?)
                     ''', (res['id'], status_type, str(message.id)))
                     conn2.commit()
 
 async def sync_all_channels():
     """Sync all channels with database"""
+    if TODAY_CHANNEL_ID:
+        await sync_channel_with_headers(TODAY_CHANNEL_ID, 'today')
     if CONFIRMED_CHANNEL_ID:
         await sync_channel_with_headers(CONFIRMED_CHANNEL_ID, 'confirmed')
     if PENDING_CHANNEL_ID:
         await sync_channel_with_headers(PENDING_CHANNEL_ID, 'pending')
 
-async def refresh_channel(channel_id, status_type):
-    """Refresh a specific channel with current reservations (legacy - redirects to sync)"""
-    await sync_channel_with_headers(channel_id, status_type)
-
-async def refresh_all_channels():
-    """Refresh all channels (legacy - redirects to sync)"""
-    await sync_all_channels()
-
 @bot.event
 async def on_ready():
-    print(f'âœ… Bot conectado como {bot.user}')
-    print(f'ðŸ“Š Canales configurados:')
+    print(f'✅ Bot conectado como {bot.user}')
+    print(f'📊 Canales configurados:')
+    print(f'   - Hoy: {TODAY_CHANNEL_ID}')
     print(f'   - Confirmadas: {CONFIRMED_CHANNEL_ID}')
     print(f'   - Pendientes: {PENDING_CHANNEL_ID}')
     print(f'   - Log: {LOG_CHANNEL_ID}')
@@ -561,10 +586,7 @@ async def on_ready():
 
 @tasks.loop(minutes=10)
 async def refresh_task():
-    """
-    Periodically check if channels need syncing
-    Only rebuilds if channel state doesn't match database
-    """
+    """Periodically check if channels need syncing"""
     logger.info("Running periodic sync check...")
     await sync_all_channels()
     logger.info("Sync check complete")
@@ -573,17 +595,9 @@ async def refresh_task():
 @commands.has_permissions(administrator=True)
 async def sync(ctx):
     """Sync channels with database - chronologically ordered with date headers"""
-    await ctx.send("ðŸ”„ Sincronizando canales con base de datos...")
+    await ctx.send("🔄 Sincronizando canales con base de datos...")
     await sync_all_channels()
-    await ctx.send("âœ… Canales sincronizados y ordenados cronolÃ³gicamente")
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def refresh(ctx):
-    """Manually refresh all channels (legacy - use !sync instead)"""
-    await ctx.send("ðŸ”„ Actualizando canales...")
-    await sync_all_channels()
-    await ctx.send("âœ… Canales actualizados")
+    await ctx.send("✅ Canales sincronizados y ordenados cronológicamente")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -592,7 +606,6 @@ async def stats(ctx):
     with get_db() as conn:
         cursor = conn.cursor()
         
-        # Get counts
         cursor.execute('SELECT COUNT(*) FROM reservations WHERE cancelled = 0')
         total = cursor.fetchone()[0]
         
@@ -611,11 +624,11 @@ async def stats(ctx):
         cursor.execute('SELECT COUNT(*) FROM reservations WHERE cancelled = 1')
         cancelled = cursor.fetchone()[0]
         
-        embed = discord.Embed(title="ðŸ“Š EstadÃ­sticas de Reservas", color=discord.Color.blue())
+        embed = discord.Embed(title="📊 Estadísticas de Reservas", color=discord.Color.blue())
         embed.add_field(name="Total Activas", value=str(total), inline=True)
-        embed.add_field(name="âœ… Confirmadas", value=str(confirmed), inline=True)
-        embed.add_field(name="â³ Pendientes", value=str(pending), inline=True)
-        embed.add_field(name="âŒ Canceladas", value=str(cancelled), inline=True)
+        embed.add_field(name="✅ Confirmadas", value=str(confirmed), inline=True)
+        embed.add_field(name="⏳ Pendientes", value=str(pending), inline=True)
+        embed.add_field(name="❌ Canceladas", value=str(cancelled), inline=True)
         
         await ctx.send(embed=embed)
 
@@ -626,44 +639,54 @@ async def setup_channels(ctx):
     guild = ctx.guild
     
     # Create category
-    category = await guild.create_category("ðŸ½ï¸ RESERVAS")
+    category = await guild.create_category("🍽️ RESERVAS")
     
     # Create channels
-    confirmed_channel = await guild.create_text_channel(
-        "reservas-confirmadas",
+    today_channel = await guild.create_text_channel(
+        "📅-hoy",
         category=category,
-        topic="Reservas confirmadas - Usa el botÃ³n para cancelar"
+        topic="Reservas de HOY - Vista rápida del día"
+    )
+    
+    confirmed_channel = await guild.create_text_channel(
+        "✅-confirmadas",
+        category=category,
+        topic="Reservas confirmadas - Usa los botones para llamar o cancelar"
     )
     
     pending_channel = await guild.create_text_channel(
-        "pendientes-aprobacion",
+        "⏳-pendientes",
         category=category,
-        topic="Reservas pendientes de aprobaciÃ³n - Usa el botÃ³n para aceptar o cancelar"
+        topic="Pendientes de aprobación - Usa los botones para aceptar, llamar o cancelar"
     )
     
     log_channel = await guild.create_text_channel(
-        "log-acciones",
+        "📋-log",
         category=category,
         topic="Registro de todas las acciones realizadas"
     )
     
     await ctx.send(f"""
-âœ… Canales creados:
+✅ Canales creados:
+- {today_channel.mention} (ID: {today_channel.id})
 - {confirmed_channel.mention} (ID: {confirmed_channel.id})
 - {pending_channel.mention} (ID: {pending_channel.id})
 - {log_channel.mention} (ID: {log_channel.id})
 
-**AÃ±ade estos IDs a tus variables de entorno:**
+**Añade estos IDs a tu archivo `.env`:**
 ```
+TODAY_CHANNEL_ID={today_channel.id}
 CONFIRMED_CHANNEL_ID={confirmed_channel.id}
 PENDING_CHANNEL_ID={pending_channel.id}
 LOG_CHANNEL_ID={log_channel.id}
 ```
+
+Luego reinicia el bot y usa `!sync` para cargar las reservas.
     """)
 
 if __name__ == '__main__':
     if not DISCORD_TOKEN:
-        print("âŒ Error: DISCORD_BOT_TOKEN no configurado")
+        print("❌ Error: DISCORD_BOT_TOKEN no configurado")
         exit(1)
     
     bot.run(DISCORD_TOKEN)
