@@ -156,7 +156,7 @@ def get_db():
 def send_sms(phone, message):
     """Send SMS via MensaTek API v7"""
     if not SMS_ENABLED:
-        logger.info(f"📱 SMS SIMULATION to {phone}:")
+        logger.info(f"ðŸ“± SMS SIMULATION to {phone}:")
         logger.info(f"   Message: {message}")
         return True
     
@@ -195,7 +195,7 @@ def send_sms(phone, message):
                 result = result[0] if result else {}
             
             if result.get('Res') == 1:
-                logger.info(f"✅ SMS sent successfully to {phone}")
+                logger.info(f"âœ… SMS sent successfully to {phone}")
                 return True
             else:
                 logger.error(f"SMS failed: {result}")
@@ -245,6 +245,11 @@ def is_booking_allowed(fecha_str, hora_str):
     Morning service: 12:00 PM
     Evening service: 19:00 (7 PM)
     
+    Rules:
+    - Can book morning slots before 12pm same day
+    - Can book evening slots before 7pm (19:00) same day
+    - After service starts, must book for next service or next day
+    
     Returns: (allowed: bool, reason: str)
     """
     try:
@@ -252,6 +257,7 @@ def is_booking_allowed(fecha_str, hora_str):
         hora = datetime.strptime(hora_str, '%H:%M').time()
         current = now()
         today = current.date()
+        current_hour = current.hour
         
         # Determine if booking is for morning or evening
         booking_timeslot = 'morning' if hora.hour < 19 else 'evening'
@@ -260,18 +266,23 @@ def is_booking_allowed(fecha_str, hora_str):
         if fecha < today:
             return False, "No puedes reservar en una fecha pasada"
         
-        # Today's bookings
+        # Today's bookings - check based on current time
         if fecha == today:
-            current_time = get_current_timeslot()
-            
-            if current_time == 'before_morning':
+            # Before noon - can book anything for today
+            if current_hour < 12:
                 return True, ""
-            elif current_time == 'morning':
+            
+            # Between noon and 7pm
+            elif 12 <= current_hour < 19:
                 if booking_timeslot == 'morning':
+                    # Already serving lunch
                     return False, "Ya estamos sirviendo el almuerzo. Puedes reservar para esta noche o mañana"
                 else:
+                    # Can still book evening slots before 7pm
                     return True, ""
-            else:  # evening
+            
+            # After 7pm - already serving dinner
+            else:
                 return False, "Ya estamos sirviendo la cena. Puedes reservar a partir de mañana"
         
         # Future dates always allowed
@@ -332,7 +343,7 @@ def create_reservation():
                 fecha_display = format_date_spanish(existing["fecha"])
                 return jsonify({
                     'success': False,
-                    'message': f'Ya tienes una reserva activa para el {fecha_display} a las {existing["hora"]}. Si necesitas cambiarla, usa el enlace de cancelación que te enviamos por SMS.'
+                    'message': f'Ya tienes una reserva activa para el {fecha_display} a las {existing["hora"]}. Si necesitas cambiarla, usa el enlace de cancelaciÃ³n que te enviamos por SMS.'
                 }), 400
         
         # Validate booking time
@@ -390,7 +401,7 @@ def create_reservation():
             sms_message = (
                 f"Hola {data['nombre']}! "
                 f"Reserva para {personas} personas el {fecha_display} a las {data['hora']}. "
-                f"Confirma aquí: {confirmation_link} "
+                f"Confirma aquÃ­: {confirmation_link} "
                 f"Revisaremos disponibilidad pronto. "
                 f"- {RESTAURANT_NAME}"
             )
@@ -398,7 +409,7 @@ def create_reservation():
             sms_message = (
                 f"Hola {data['nombre']}! "
                 f"Reserva {RESTAURANT_NAME} el {fecha_display} a las {data['hora']} ({personas} personas). "
-                f"Confirma aquí: {confirmation_link}"
+                f"Confirma aquÃ­: {confirmation_link}"
             )
         
         # Send SMS
@@ -407,14 +418,14 @@ def create_reservation():
         if not sms_sent:
             logger.warning(f"SMS failed for reservation {reservation_id}")
         
-        logger.info(f"✅ Reservation created: ID={reservation_id}, Token={confirmation_token}")
+        logger.info(f"âœ… Reservation created: ID={reservation_id}, Token={confirmation_token}")
         
         return jsonify({
             'success': True,
             'reservation_id': reservation_id,
             'large_group': is_large,
             'sms_sent': sms_sent,
-            'message': 'Reserva registrada. Revisa tu móvil para confirmar.'
+            'message': 'Reserva registrada. Revisa tu mÃ³vil para confirmar.'
         })
         
     except Exception as e:
@@ -468,8 +479,8 @@ def confirm_reservation(token):
                         </head>
                         <body>
                             <div class="container">
-                                <h1>⚠️ Enlace inválido o ya usado</h1>
-                                <p>Esta reserva ya fue confirmada o el enlace no es válido.</p>
+                                <h1>âš ï¸ Enlace invÃ¡lido o ya usado</h1>
+                                <p>Esta reserva ya fue confirmada o el enlace no es vÃ¡lido.</p>
                                 <a href="/">Volver al inicio</a>
                             </div>
                         </body>
@@ -508,7 +519,7 @@ def confirm_reservation(token):
                     </head>
                     <body>
                         <div class="container">
-                            <h1>📋 Confirma tu Reserva</h1>
+                            <h1>ðŸ“‹ Confirma tu Reserva</h1>
                             <div class="details">
                                 <div class="detail-row">
                                     <span class="detail-label">Nombre:</span>
@@ -528,7 +539,7 @@ def confirm_reservation(token):
                                 </div>
                             </div>
                             <form method="POST">
-                                <button type="submit" class="confirm-btn">✓ Confirmar Reserva</button>
+                                <button type="submit" class="confirm-btn">âœ“ Confirmar Reserva</button>
                             </form>
                         </div>
                     </body>
@@ -571,8 +582,8 @@ def confirm_reservation(token):
                         </head>
                         <body>
                             <div class="container">
-                                <h1>⚠️ Enlace inválido o expirado</h1>
-                                <p>Esta reserva ya fue confirmada o el enlace no es válido.</p>
+                                <h1>âš ï¸ Enlace invÃ¡lido o expirado</h1>
+                                <p>Esta reserva ya fue confirmada o el enlace no es vÃ¡lido.</p>
                                 <a href="/">Volver al inicio</a>
                             </div>
                         </body>
@@ -592,7 +603,7 @@ def confirm_reservation(token):
                     # SMS for large group - mention they'll be contacted
                     message = (
                         f"Gracias por confirmar {reservation['nombre']}! "
-                        f"Tu solicitud para {reservation['personas']} personas está registrada. "
+                        f"Tu solicitud para {reservation['personas']} personas estÃ¡ registrada. "
                         f"Te contactaremos pronto para confirmar disponibilidad. "
                         f"Puedes cancelar con este enlace si es necesario."
                     )
@@ -601,7 +612,7 @@ def confirm_reservation(token):
                     new_status = 'confirmed'
                     # SMS for small group - confirmed! Mention cancellation link
                     message = (
-                        f"¡Perfecto {reservation['nombre']}! "
+                        f"Â¡Perfecto {reservation['nombre']}! "
                         f"Reserva confirmada el {fecha_display} a las {reservation['hora']}. "
                         f"Les esperamos! Puedes cancelar con este mismo enlace si es necesario."
                     )
@@ -662,10 +673,10 @@ def confirm_reservation(token):
                     </head>
                     <body>
                         <div class="container">
-                            <div class="checkmark">✓</div>
-                            <h1>{'¡Reserva Confirmada!' if new_status == 'confirmed' else '¡Solicitud Recibida!'}</h1>
+                            <div class="checkmark">âœ“</div>
+                            <h1>{'Â¡Reserva Confirmada!' if new_status == 'confirmed' else 'Â¡Solicitud Recibida!'}</h1>
                             <p>{message}</p>
-                            {'<div class="pending-approval">⏳ Grupos grandes requieren confirmación del restaurante. Te contactaremos en breve.</div>' if is_large else ''}
+                            {'<div class="pending-approval">â³ Grupos grandes requieren confirmaciÃ³n del restaurante. Te contactaremos en breve.</div>' if is_large else ''}
                             <div class="details">
                                 <div class="detail-row">
                                     <span class="detail-label">Fecha:</span>
@@ -680,10 +691,10 @@ def confirm_reservation(token):
                                     <span class="detail-value">{reservation['personas']}</span>
                                 </div>
                             </div>
-                            <p><small>Te hemos enviado un SMS de confirmación</small></p>
+                            <p><small>Te hemos enviado un SMS de confirmaciÃ³n</small></p>
                             <div class="actions">
-                                <p><small>¿Necesitas cancelar?</small></p>
-                                <a href="{cancel_link}" class="cancel-btn">✕ Cancelar mi Reserva</a>
+                                <p><small>Â¿Necesitas cancelar?</small></p>
+                                <a href="{cancel_link}" class="cancel-btn">âœ• Cancelar mi Reserva</a>
                             </div>
                             <a href="/">Volver al inicio</a>
                         </div>
@@ -693,7 +704,7 @@ def confirm_reservation(token):
             
     except Exception as e:
         logger.error(f"Error confirming reservation: {str(e)}")
-        return "Error procesando la confirmación", 500
+        return "Error procesando la confirmaciÃ³n", 500
 
 @app.route('/cancel/<token>', methods=['GET'])
 def cancel_reservation(token):
@@ -733,8 +744,8 @@ def cancel_reservation(token):
                     </head>
                     <body>
                         <div class="container">
-                            <h1>⚠️ Enlace inválido</h1>
-                            <p>Esta reserva ya fue cancelada o el enlace no es válido.</p>
+                            <h1>âš ï¸ Enlace invÃ¡lido</h1>
+                            <p>Esta reserva ya fue cancelada o el enlace no es vÃ¡lido.</p>
                             <a href="/">Volver al inicio</a>
                         </div>
                     </body>
@@ -798,7 +809,7 @@ def cancel_reservation(token):
                 </head>
                 <body>
                     <div class="container">
-                        <div class="icon">✕</div>
+                        <div class="icon">âœ•</div>
                         <h1>Reserva Cancelada</h1>
                         <p>Tu reserva ha sido cancelada exitosamente.</p>
                         <div class="details">
@@ -815,8 +826,8 @@ def cancel_reservation(token):
                                 <span class="detail-value">{reservation['personas']}</span>
                             </div>
                         </div>
-                        <p><small>Te hemos enviado un SMS de confirmación de la cancelación</small></p>
-                        <p>¡Esperamos verte pronto en {RESTAURANT_NAME}!</p>
+                        <p><small>Te hemos enviado un SMS de confirmaciÃ³n de la cancelaciÃ³n</small></p>
+                        <p>Â¡Esperamos verte pronto en {RESTAURANT_NAME}!</p>
                         <a href="/">Hacer una nueva reserva</a>
                     </div>
                 </body>
@@ -825,7 +836,159 @@ def cancel_reservation(token):
             
     except Exception as e:
         logger.error(f"Error cancelling reservation: {str(e)}")
-        return "Error procesando la cancelación", 500
+        return "Error procesando la cancelaciÃ³n", 500
+
+# ============================================================================
+# ADMIN API ENDPOINTS (for Discord bot)
+# ============================================================================
+
+def require_api_key(f):
+    """Decorator to require API key authentication"""
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        token = auth_header.split(' ')[1]
+        if token != API_KEY:
+            return jsonify({'error': 'Invalid API key'}), 401
+        
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
+@app.route('/api/admin/reservations', methods=['GET'])
+@require_api_key
+def get_reservations():
+    """Get reservations (for Discord bot)"""
+    try:
+        status_filter = request.args.get('status', 'all')
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            if status_filter == 'pending_approval':
+                query = '''
+                    SELECT * FROM reservations 
+                    WHERE user_confirmed = 1 
+                    AND restaurant_confirmed = 0 
+                    AND cancelled = 0
+                    ORDER BY fecha, hora
+                '''
+            elif status_filter == 'confirmed':
+                query = '''
+                    SELECT * FROM reservations 
+                    WHERE user_confirmed = 1 
+                    AND restaurant_confirmed = 1 
+                    AND cancelled = 0
+                    ORDER BY fecha, hora
+                '''
+            else:
+                query = '''
+                    SELECT * FROM reservations 
+                    ORDER BY created_at DESC
+                '''
+            
+            cursor.execute(query)
+            reservations = [dict(row) for row in cursor.fetchall()]
+            
+            return jsonify({'reservations': reservations})
+            
+    except Exception as e:
+        logger.error(f"Error getting reservations: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/admin/confirm/<int:reservation_id>', methods=['POST'])
+@require_api_key
+def restaurant_confirm(reservation_id):
+    """Restaurant confirms a large group (called by Discord bot)"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT * FROM reservations WHERE id = ?', (reservation_id,))
+            reservation = cursor.fetchone()
+            
+            if not reservation:
+                return jsonify({'error': 'Reservation not found'}), 404
+            
+            if reservation['restaurant_confirmed']:
+                return jsonify({'error': 'Already confirmed'}), 400
+            
+            # Update to restaurant-confirmed
+            cursor.execute('''
+                UPDATE reservations 
+                SET restaurant_confirmed = 1,
+                    status = 'confirmed'
+                WHERE id = ?
+            ''', (reservation_id,))
+            conn.commit()
+            
+            # Log action
+            log_action(reservation_id, 'restaurant_confirmed', 'discord_bot', 'Via Discord bot')
+            
+            # Format date for SMS
+            fecha_display = format_date_spanish(reservation['fecha'])
+            
+            # Send SMS to customer
+            message = (
+                f"Â¡Buenas noticias {reservation['nombre']}! "
+                f"Tu reserva para {reservation['personas']} personas el {fecha_display} "
+                f"a las {reservation['hora']} estÃ¡ CONFIRMADA. Â¡Te esperamos! - {RESTAURANT_NAME}"
+            )
+            send_sms(reservation['telefono'], message)
+            
+            logger.info(f"âœ… Restaurant confirmed reservation {reservation_id}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Reservation confirmed and customer notified'
+            })
+            
+    except Exception as e:
+        logger.error(f"Error confirming reservation: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/stats', methods=['GET'])
+@require_api_key
+def get_stats():
+    """Get reservation statistics"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Today's stats
+            cursor.execute('''
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN user_confirmed = 1 AND restaurant_confirmed = 1 THEN 1 ELSE 0 END) as confirmed,
+                    SUM(CASE WHEN user_confirmed = 1 AND restaurant_confirmed = 0 THEN 1 ELSE 0 END) as pending_restaurant,
+                    SUM(CASE WHEN user_confirmed = 0 THEN 1 ELSE 0 END) as pending_user
+                FROM reservations
+                WHERE DATE(created_at, 'localtime') = DATE('now', 'localtime') AND cancelled = 0
+            ''')
+            today_stats = dict(cursor.fetchone())
+            
+            # All time stats
+            cursor.execute('''
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN user_confirmed = 1 AND restaurant_confirmed = 1 THEN 1 ELSE 0 END) as confirmed,
+                    SUM(CASE WHEN user_confirmed = 1 AND restaurant_confirmed = 0 THEN 1 ELSE 0 END) as pending_restaurant,
+                    SUM(CASE WHEN user_confirmed = 0 THEN 1 ELSE 0 END) as pending_user,
+                    SUM(CASE WHEN cancelled = 1 THEN 1 ELSE 0 END) as cancelled
+                FROM reservations
+            ''')
+            all_time_stats = dict(cursor.fetchone())
+            
+            return jsonify({
+                'today': today_stats,
+                'all_time': all_time_stats
+            })
+            
+    except Exception as e:
+        logger.error(f"Error getting stats: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 # ============================================================================
 # STATIC PAGE ROUTES
