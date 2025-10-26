@@ -1597,86 +1597,20 @@
         
         timeSlots.forEach(slot => {
             slot.addEventListener('click', () => {
-                // Only allow clicking visible slots
-                if (slot.style.display === 'none') return;
-                
                 timeSlots.forEach(s => s.classList.remove('selected'));
                 slot.classList.add('selected');
                 horaInput.value = slot.dataset.time;
             });
         });
 
-        // Dynamic date and time slot management
+        // Set minimum date to tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
         const dateInput = document.getElementById('fecha');
-        const now = new Date();
-        const currentHour = now.getHours();
-        
-        // Function to update available time slots based on selected date
-        function updateAvailableTimeSlots() {
-            const selectedDate = new Date(dateInput.value + 'T00:00:00');
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            selectedDate.setHours(0, 0, 0, 0);
-            
-            const isToday = selectedDate.getTime() === today.getTime();
-            
-            timeSlots.forEach(slot => {
-                const slotTime = slot.dataset.time;
-                const slotHour = parseInt(slotTime.split(':')[0]);
-                
-                if (isToday) {
-                    // Today's logic based on current time
-                    if (currentHour < 12) {
-                        // Before noon - show all slots
-                        slot.style.display = '';
-                    } else if (currentHour >= 12 && currentHour < 19) {
-                        // Between noon and 7pm - only show evening slots (after 19:00)
-                        if (slotHour >= 19) {
-                            slot.style.display = '';
-                        } else {
-                            slot.style.display = 'none';
-                        }
-                    } else {
-                        // After 7pm - no slots available for today
-                        slot.style.display = 'none';
-                    }
-                } else {
-                    // Future dates - show all slots
-                    slot.style.display = '';
-                }
-            });
-            
-            // Auto-select first visible slot
-            const firstVisible = Array.from(timeSlots).find(slot => slot.style.display !== 'none');
-            if (firstVisible) {
-                timeSlots.forEach(s => s.classList.remove('selected'));
-                firstVisible.classList.add('selected');
-                horaInput.value = firstVisible.dataset.time;
-            }
-        }
-        
-        // Set date options - allow today if before 7pm
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
-        
-        if (currentHour < 19) {
-            // Before 7pm - allow today
-            dateInput.setAttribute('min', todayStr);
-            dateInput.value = todayStr;
-        } else {
-            // After 7pm - minimum is tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowStr = tomorrow.toISOString().split('T')[0];
-            dateInput.setAttribute('min', tomorrowStr);
-            dateInput.value = tomorrowStr;
-        }
-        
-        // Update slots when date changes
-        dateInput.addEventListener('change', updateAvailableTimeSlots);
-        
-        // Initial update
-        updateAvailableTimeSlots();
+        dateInput.setAttribute('min', tomorrowStr);
+        dateInput.value = tomorrowStr;
 
         // Subtle rotating messages
         const urgencyElements = document.querySelectorAll('.urgency-badge, .limited-spots');
