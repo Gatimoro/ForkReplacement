@@ -156,7 +156,7 @@ def get_db():
 def send_sms(phone, message):
     """Send SMS via MensaTek API v7"""
     if not SMS_ENABLED:
-        logger.info(f"ðŸ“± SMS SIMULATION to {phone}:")
+        logger.info(f"📱 SMS SIMULATION to {phone}:")
         logger.info(f"   Message: {message}")
         return True
     
@@ -195,7 +195,7 @@ def send_sms(phone, message):
                 result = result[0] if result else {}
             
             if result.get('Res') == 1:
-                logger.info(f"âœ… SMS sent successfully to {phone}")
+                logger.info(f"✅ SMS sent successfully to {phone}")
                 return True
             else:
                 logger.error(f"SMS failed: {result}")
@@ -268,11 +268,11 @@ def is_booking_allowed(fecha_str, hora_str):
                 return True, ""
             elif current_time == 'morning':
                 if booking_timeslot == 'morning':
-                    return False, "Ya estamos sirviendo el almuerzo. Puedes reservar para esta noche o maÃ±ana"
+                    return False, "Ya estamos sirviendo el almuerzo. Puedes reservar para esta noche o mañana"
                 else:
                     return True, ""
             else:  # evening
-                return False, "Ya estamos sirviendo la cena. Puedes reservar a partir de maÃ±ana"
+                return False, "Ya estamos sirviendo la cena. Puedes reservar a partir de mañana"
         
         # Future dates always allowed
         return True, ""
@@ -332,7 +332,7 @@ def create_reservation():
                 fecha_display = format_date_spanish(existing["fecha"])
                 return jsonify({
                     'success': False,
-                    'message': f'Ya tienes una reserva activa para el {fecha_display} a las {existing["hora"]}. Si necesitas cambiarla, usa el enlace de cancelaciÃ³n que te enviamos por SMS.'
+                    'message': f'Ya tienes una reserva activa para el {fecha_display} a las {existing["hora"]}. Si necesitas cambiarla, usa el enlace de cancelación que te enviamos por SMS.'
                 }), 400
         
         # Validate booking time
@@ -390,7 +390,7 @@ def create_reservation():
             sms_message = (
                 f"Hola {data['nombre']}! "
                 f"Reserva para {personas} personas el {fecha_display} a las {data['hora']}. "
-                f"Confirma aquÃ­: {confirmation_link} "
+                f"Confirma aquí: {confirmation_link} "
                 f"Revisaremos disponibilidad pronto. "
                 f"- {RESTAURANT_NAME}"
             )
@@ -398,7 +398,7 @@ def create_reservation():
             sms_message = (
                 f"Hola {data['nombre']}! "
                 f"Reserva {RESTAURANT_NAME} el {fecha_display} a las {data['hora']} ({personas} personas). "
-                f"Confirma aquÃ­: {confirmation_link}"
+                f"Confirma aquí: {confirmation_link}"
             )
         
         # Send SMS
@@ -407,14 +407,14 @@ def create_reservation():
         if not sms_sent:
             logger.warning(f"SMS failed for reservation {reservation_id}")
         
-        logger.info(f"âœ… Reservation created: ID={reservation_id}, Token={confirmation_token}")
+        logger.info(f"✅ Reservation created: ID={reservation_id}, Token={confirmation_token}")
         
         return jsonify({
             'success': True,
             'reservation_id': reservation_id,
             'large_group': is_large,
             'sms_sent': sms_sent,
-            'message': 'Reserva registrada. Revisa tu mÃ³vil para confirmar.'
+            'message': 'Reserva registrada. Revisa tu móvil para confirmar.'
         })
         
     except Exception as e:
@@ -439,13 +439,15 @@ def confirm_reservation(token):
                 cursor = conn.cursor()
                 cursor.execute('''
                     SELECT * FROM reservations 
-                    WHERE confirmation_token = ?
+                    WHERE confirmation_token = ? 
+                    AND user_confirmed = 0 
+                    AND cancelled = 0
                 ''', (token,))
                 
                 reservation = cursor.fetchone()
                 
                 if not reservation:
-                    logger.warning(f"Invalid token: {token}")
+                    logger.warning(f"Invalid token or already confirmed: {token}")
                     return '''
                         <!DOCTYPE html>
                         <html lang="es">
@@ -466,8 +468,8 @@ def confirm_reservation(token):
                         </head>
                         <body>
                             <div class="container">
-                                <h1>âš ï¸Â Enlace invÃ¡lido o ya usado</h1>
-                                <p>Esta reserva ya fue confirmada o el enlace no es vÃ¡lido.</p>
+                                <h1>⚠️ Enlace inválido o ya usado</h1>
+                                <p>Esta reserva ya fue confirmada o el enlace no es válido.</p>
                                 <a href="/">Volver al inicio</a>
                             </div>
                         </body>
@@ -477,143 +479,7 @@ def confirm_reservation(token):
                 # Format date for display
                 fecha_display = format_date_spanish(reservation['fecha'])
                 
-                # If cancelled, show cancelled message
-                if reservation['cancelled']:
-                    return f'''
-                        <!DOCTYPE html>
-                        <html lang="es">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <title>Reserva Cancelada - {RESTAURANT_NAME}</title>
-                            <style>
-                                body {{ font-family: Georgia, serif; display: flex; justify-content: center;
-                                       align-items: center; min-height: 100vh; margin: 0;
-                                       background: linear-gradient(135deg, #fff5f5 0%, #fff 100%); }}
-                                .container {{ text-align: center; padding: 40px; background: white;
-                                            border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 500px; }}
-                                .icon {{ width: 80px; height: 80px; margin: 0 auto 20px; background: #dc3545;
-                                        border-radius: 50%; display: flex; align-items: center;
-                                        justify-content: center; font-size: 40px; color: white; }}
-                                h1 {{ color: #2a2523; margin: 20px 0; }}
-                                p {{ color: #666; line-height: 1.6; margin: 15px 0; }}
-                                .details {{ background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }}
-                                .detail-row {{ display: flex; justify-content: space-between; margin: 10px 0; }}
-                                .detail-label {{ font-weight: bold; color: #333; }}
-                                .detail-value {{ color: #666; text-decoration: line-through; }}
-                                a {{ display: inline-block; margin-top: 20px; padding: 12px 30px;
-                                    background: #28a428; color: white; text-decoration: none;
-                                    border-radius: 5px; transition: all 0.3s; }}
-                                a:hover {{ background: #218838; }}
-                            </style>
-                        </head>
-                        <body>
-                            <div class="container">
-                                <div class="icon">✕</div>
-                                <h1>Reserva Cancelada</h1>
-                                <p>Esta reserva ha sido cancelada.</p>
-                                <div class="details">
-                                    <div class="detail-row">
-                                        <span class="detail-label">Fecha:</span>
-                                        <span class="detail-value">{fecha_display}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">Hora:</span>
-                                        <span class="detail-value">{reservation['hora']}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">Personas:</span>
-                                        <span class="detail-value">{reservation['personas']}</span>
-                                    </div>
-                                </div>
-                                <p>¡Esperamos verte pronto en {RESTAURANT_NAME}!</p>
-                                <a href="/">Hacer una nueva reserva</a>
-                            </div>
-                        </body>
-                        </html>
-                    '''
-                
-                # If already confirmed, show the confirmed page with cancel button
-                if reservation['user_confirmed']:
-                    is_large = is_large_group(reservation['personas'])
-                    cancel_link = f"{DOMAIN}/cancel/{reservation['confirmation_token']}"
-                    
-                    # Determine message based on status
-                    if reservation['restaurant_confirmed']:
-                        status_message = "Tu reserva está confirmada. ¡Te esperamos!"
-                        title = "¡Reserva Confirmada!"
-                    else:
-                        status_message = "Hemos recibido tu confirmación. Revisaremos disponibilidad y te contactaremos pronto."
-                        title = "Confirmación Recibida"
-                    
-                    return f'''
-                        <!DOCTYPE html>
-                        <html lang="es">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <title>{title} - {RESTAURANT_NAME}</title>
-                            <style>
-                                body {{ font-family: Georgia, serif; display: flex; justify-content: center;
-                                       align-items: center; min-height: 100vh; margin: 0;
-                                       background: linear-gradient(135deg, #faf8f3 0%, #fff 100%); }}
-                                .container {{ text-align: center; padding: 40px; background: white;
-                                            border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 500px; }}
-                                .checkmark {{ width: 80px; height: 80px; margin: 0 auto 20px; background: #32cd32;
-                                            border-radius: 50%; display: flex; align-items: center;
-                                            justify-content: center; font-size: 40px; color: white; }}
-                                h1 {{ color: #2a2523; margin: 20px 0; }}
-                                p {{ color: #666; line-height: 1.6; margin: 15px 0; }}
-                                .details {{ background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }}
-                                .detail-row {{ display: flex; justify-content: space-between; margin: 10px 0; }}
-                                .detail-label {{ font-weight: bold; color: #333; }}
-                                .detail-value {{ color: #666; }}
-                                a {{ display: inline-block; margin-top: 20px; padding: 12px 30px;
-                                    background: transparent; color: #666; text-decoration: none;
-                                    border: 2px solid #ddd; border-radius: 5px; transition: all 0.3s; }}
-                                a:hover {{ background: #32cd32; color: white; border-color: #32cd32; }}
-                                .cancel-btn {{ background: #dc3545; color: white; border-color: #dc3545; font-weight: bold; }}
-                                .cancel-btn:hover {{ background: #c82333; border-color: #c82333; }}
-                                .pending-approval {{ background: #fff3cd; border: 2px solid #ffc107;
-                                                  padding: 15px; border-radius: 8px; margin: 20px 0; }}
-                                .actions {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }}
-                            </style>
-                        </head>
-                        <body>
-                            <div class="container">
-                                <div class="checkmark">✓</div>
-                                <h1>{title}</h1>
-                                <p>{status_message}</p>
-                                {'<div class="pending-approval">⏳ Grupos grandes requieren confirmación del restaurante. Te contactaremos en breve.</div>' if not reservation['restaurant_confirmed'] else ''}
-                                <div class="details">
-                                    <div class="detail-row">
-                                        <span class="detail-label">Nombre:</span>
-                                        <span class="detail-value">{reservation['nombre']}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">Fecha:</span>
-                                        <span class="detail-value">{fecha_display}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">Hora:</span>
-                                        <span class="detail-value">{reservation['hora']}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">Personas:</span>
-                                        <span class="detail-value">{reservation['personas']}</span>
-                                    </div>
-                                </div>
-                                <div class="actions">
-                                    <p><small>¿Necesitas cancelar esta reserva?</small></p>
-                                    <a href="{cancel_link}" class="cancel-btn">✕ Cancelar mi Reserva</a>
-                                </div>
-                                <a href="/">Volver al inicio</a>
-                            </div>
-                        </body>
-                        </html>
-                    '''
-                
-                # Not confirmed yet - Show confirmation button
+                # Show confirmation button
                 return f'''
                     <!DOCTYPE html>
                     <html lang="es">
@@ -642,7 +508,7 @@ def confirm_reservation(token):
                     </head>
                     <body>
                         <div class="container">
-                            <h1>ðŸ“‹ Confirma tu Reserva</h1>
+                            <h1>📋 Confirma tu Reserva</h1>
                             <div class="details">
                                 <div class="detail-row">
                                     <span class="detail-label">Nombre:</span>
@@ -662,7 +528,7 @@ def confirm_reservation(token):
                                 </div>
                             </div>
                             <form method="POST">
-                                <button type="submit" class="confirm-btn">âœ” Confirmar Reserva</button>
+                                <button type="submit" class="confirm-btn">✓ Confirmar Reserva</button>
                             </form>
                         </div>
                     </body>
@@ -705,8 +571,8 @@ def confirm_reservation(token):
                         </head>
                         <body>
                             <div class="container">
-                                <h1>âš ï¸Â Enlace invÃ¡lido o expirado</h1>
-                                <p>Esta reserva ya fue confirmada o el enlace no es vÃ¡lido.</p>
+                                <h1>⚠️ Enlace inválido o expirado</h1>
+                                <p>Esta reserva ya fue confirmada o el enlace no es válido.</p>
                                 <a href="/">Volver al inicio</a>
                             </div>
                         </body>
@@ -726,7 +592,7 @@ def confirm_reservation(token):
                     # SMS for large group - mention they'll be contacted
                     message = (
                         f"Gracias por confirmar {reservation['nombre']}! "
-                        f"Tu solicitud para {reservation['personas']} personas estÃ¡ registrada. "
+                        f"Tu solicitud para {reservation['personas']} personas está registrada. "
                         f"Te contactaremos pronto para confirmar disponibilidad. "
                         f"Puedes cancelar con este enlace si es necesario."
                     )
@@ -735,7 +601,7 @@ def confirm_reservation(token):
                     new_status = 'confirmed'
                     # SMS for small group - confirmed! Mention cancellation link
                     message = (
-                        f"Â¡Perfecto {reservation['nombre']}! "
+                        f"¡Perfecto {reservation['nombre']}! "
                         f"Reserva confirmada el {fecha_display} a las {reservation['hora']}. "
                         f"Les esperamos! Puedes cancelar con este mismo enlace si es necesario."
                     )
@@ -796,10 +662,10 @@ def confirm_reservation(token):
                     </head>
                     <body>
                         <div class="container">
-                            <div class="checkmark">âœ”</div>
-                            <h1>{'Â¡Reserva Confirmada!' if new_status == 'confirmed' else 'Â¡Solicitud Recibida!'}</h1>
+                            <div class="checkmark">✓</div>
+                            <h1>{'¡Reserva Confirmada!' if new_status == 'confirmed' else '¡Solicitud Recibida!'}</h1>
                             <p>{message}</p>
-                            {'<div class="pending-approval">â³ Grupos grandes requieren confirmaciÃ³n del restaurante. Te contactaremos en breve.</div>' if is_large else ''}
+                            {'<div class="pending-approval">⏳ Grupos grandes requieren confirmación del restaurante. Te contactaremos en breve.</div>' if is_large else ''}
                             <div class="details">
                                 <div class="detail-row">
                                     <span class="detail-label">Fecha:</span>
@@ -814,10 +680,10 @@ def confirm_reservation(token):
                                     <span class="detail-value">{reservation['personas']}</span>
                                 </div>
                             </div>
-                            <p><small>Te hemos enviado un SMS de confirmaciÃ³n</small></p>
+                            <p><small>Te hemos enviado un SMS de confirmación</small></p>
                             <div class="actions">
-                                <p><small>Â¿Necesitas cancelar?</small></p>
-                                <a href="{cancel_link}" class="cancel-btn">âœ• Cancelar mi Reserva</a>
+                                <p><small>¿Necesitas cancelar?</small></p>
+                                <a href="{cancel_link}" class="cancel-btn">✕ Cancelar mi Reserva</a>
                             </div>
                             <a href="/">Volver al inicio</a>
                         </div>
@@ -827,7 +693,7 @@ def confirm_reservation(token):
             
     except Exception as e:
         logger.error(f"Error confirming reservation: {str(e)}")
-        return "Error procesando la confirmaciÃ³n", 500
+        return "Error procesando la confirmación", 500
 
 @app.route('/cancel/<token>', methods=['GET'])
 def cancel_reservation(token):
@@ -867,8 +733,8 @@ def cancel_reservation(token):
                     </head>
                     <body>
                         <div class="container">
-                            <h1>âš ï¸Â Enlace invÃ¡lido</h1>
-                            <p>Esta reserva ya fue cancelada o el enlace no es vÃ¡lido.</p>
+                            <h1>⚠️ Enlace inválido</h1>
+                            <p>Esta reserva ya fue cancelada o el enlace no es válido.</p>
                             <a href="/">Volver al inicio</a>
                         </div>
                     </body>
@@ -932,7 +798,7 @@ def cancel_reservation(token):
                 </head>
                 <body>
                     <div class="container">
-                        <div class="icon">âœ•</div>
+                        <div class="icon">✕</div>
                         <h1>Reserva Cancelada</h1>
                         <p>Tu reserva ha sido cancelada exitosamente.</p>
                         <div class="details">
@@ -949,8 +815,8 @@ def cancel_reservation(token):
                                 <span class="detail-value">{reservation['personas']}</span>
                             </div>
                         </div>
-                        <p><small>Te hemos enviado un SMS de confirmaciÃ³n de la cancelaciÃ³n</small></p>
-                        <p>Â¡Esperamos verte pronto en {RESTAURANT_NAME}!</p>
+                        <p><small>Te hemos enviado un SMS de confirmación de la cancelación</small></p>
+                        <p>¡Esperamos verte pronto en {RESTAURANT_NAME}!</p>
                         <a href="/">Hacer una nueva reserva</a>
                     </div>
                 </body>
@@ -959,7 +825,7 @@ def cancel_reservation(token):
             
     except Exception as e:
         logger.error(f"Error cancelling reservation: {str(e)}")
-        return "Error procesando la cancelaciÃ³n", 500
+        return "Error procesando la cancelación", 500
 
 # ============================================================================
 # ADMIN API ENDPOINTS (for Discord bot)
@@ -1055,13 +921,13 @@ def restaurant_confirm(reservation_id):
             
             # Send SMS to customer
             message = (
-                f"Â¡Buenas noticias {reservation['nombre']}! "
+                f"¡Buenas noticias {reservation['nombre']}! "
                 f"Tu reserva para {reservation['personas']} personas el {fecha_display} "
-                f"a las {reservation['hora']} estÃ¡ CONFIRMADA. Â¡Te esperamos! - {RESTAURANT_NAME}"
+                f"a las {reservation['hora']} está CONFIRMADA. ¡Te esperamos! - {RESTAURANT_NAME}"
             )
             send_sms(reservation['telefono'], message)
             
-            logger.info(f"âœ… Restaurant confirmed reservation {reservation_id}")
+            logger.info(f"✅ Restaurant confirmed reservation {reservation_id}")
             
             return jsonify({
                 'success': True,
@@ -1114,163 +980,6 @@ def get_stats():
         return jsonify({'error': 'Internal server error'}), 500
 
 # ============================================================================
-# ADMIN PANEL API ENDPOINTS
-# ============================================================================
-
-@app.route('/api/admin/all-reservations', methods=['GET'])
-def get_all_reservations():
-    """Get all reservations for admin panel (no auth for simplicity)"""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT * FROM reservations 
-                ORDER BY fecha DESC, hora DESC
-            ''')
-            reservations = [dict(row) for row in cursor.fetchall()]
-            
-            # Get stats
-            cursor.execute('''
-                SELECT 
-                    COUNT(*) as total_active,
-                    SUM(CASE WHEN user_confirmed = 0 AND cancelled = 0 THEN 1 ELSE 0 END) as pending_user,
-                    SUM(CASE WHEN user_confirmed = 1 AND restaurant_confirmed = 0 AND cancelled = 0 THEN 1 ELSE 0 END) as pending_restaurant,
-                    SUM(CASE WHEN user_confirmed = 1 AND restaurant_confirmed = 1 AND cancelled = 0 THEN 1 ELSE 0 END) as confirmed,
-                    SUM(CASE WHEN cancelled = 1 THEN 1 ELSE 0 END) as cancelled
-                FROM reservations
-                WHERE cancelled = 0
-            ''')
-            stats = dict(cursor.fetchone())
-            
-            # Count all cancelled
-            cursor.execute('SELECT COUNT(*) as cancelled FROM reservations WHERE cancelled = 1')
-            stats['cancelled'] = cursor.fetchone()['cancelled']
-            
-            return jsonify({
-                'success': True,
-                'reservations': reservations,
-                'stats': stats
-            })
-            
-    except Exception as e:
-        logger.error(f"Error getting reservations: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/admin/approve/<int:reservation_id>', methods=['POST'])
-def admin_approve(reservation_id):
-    """Approve a reservation from admin panel"""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute('SELECT * FROM reservations WHERE id = ?', (reservation_id,))
-            reservation = cursor.fetchone()
-            
-            if not reservation:
-                return jsonify({'success': False, 'message': 'Reserva no encontrada'}), 404
-            
-            if reservation['restaurant_confirmed']:
-                return jsonify({'success': False, 'message': 'Ya confirmada'}), 400
-            
-            # Update to confirmed
-            cursor.execute('''
-                UPDATE reservations 
-                SET restaurant_confirmed = 1, status = 'confirmed'
-                WHERE id = ?
-            ''', (reservation_id,))
-            conn.commit()
-            
-            # Log action
-            log_action(reservation_id, 'restaurant_confirmed', 'admin_panel', 'Via admin panel')
-            
-            # Send SMS
-            fecha_display = format_date_spanish(reservation['fecha'])
-            message = (
-                f"¡Buenas noticias {reservation['nombre']}! "
-                f"Tu reserva para {reservation['personas']} personas el {fecha_display} "
-                f"a las {reservation['hora']} está CONFIRMADA. ¡Te esperamos! - {RESTAURANT_NAME}"
-            )
-            send_sms(reservation['telefono'], message)
-            
-            logger.info(f"✅ Admin approved reservation {reservation_id}")
-            
-            return jsonify({'success': True, 'message': 'Reserva aprobada'})
-            
-    except Exception as e:
-        logger.error(f"Error approving reservation: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/admin/cancel/<int:reservation_id>', methods=['POST'])
-def admin_cancel(reservation_id):
-    """Cancel a reservation from admin panel"""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute('SELECT * FROM reservations WHERE id = ?', (reservation_id,))
-            reservation = cursor.fetchone()
-            
-            if not reservation:
-                return jsonify({'success': False, 'message': 'Reserva no encontrada'}), 404
-            
-            if reservation['cancelled']:
-                return jsonify({'success': False, 'message': 'Ya cancelada'}), 400
-            
-            # Cancel it
-            cursor.execute('''
-                UPDATE reservations 
-                SET cancelled = 1, 
-                    cancelled_at = CURRENT_TIMESTAMP, 
-                    cancelled_by = 'admin'
-                WHERE id = ?
-            ''', (reservation_id,))
-            conn.commit()
-            
-            # Log action
-            log_action(reservation_id, 'cancelled', 'admin_panel', 'Via admin panel')
-            
-            # Send SMS
-            fecha_display = format_date_spanish(reservation['fecha'])
-            message = (
-                f"Hola {reservation['nombre']}, "
-                f"lamentamos informarte que tu reserva para {reservation['personas']} personas "
-                f"el {fecha_display} a las {reservation['hora']} ha sido cancelada. "
-                f"Por favor, contáctanos al {RESTAURANT_PHONE}. - {RESTAURANT_NAME}"
-            )
-            send_sms(reservation['telefono'], message)
-            
-            logger.info(f"✅ Admin cancelled reservation {reservation_id}")
-            
-            return jsonify({'success': True, 'message': 'Reserva cancelada'})
-            
-    except Exception as e:
-        logger.error(f"Error cancelling reservation: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/admin/delete/<int:reservation_id>', methods=['DELETE'])
-def admin_delete(reservation_id):
-    """Permanently delete a reservation from database"""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            # Delete related records first
-            cursor.execute('DELETE FROM action_log WHERE reservation_id = ?', (reservation_id,))
-            cursor.execute('DELETE FROM discord_messages WHERE reservation_id = ?', (reservation_id,))
-            cursor.execute('DELETE FROM reservations WHERE id = ?', (reservation_id,))
-            
-            conn.commit()
-            
-            logger.info(f"🗑️ Admin deleted reservation {reservation_id}")
-            
-            return jsonify({'success': True, 'message': 'Reserva eliminada'})
-            
-    except Exception as e:
-        logger.error(f"Error deleting reservation: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-# ============================================================================
 # STATIC PAGE ROUTES
 # ============================================================================
 
@@ -1286,19 +995,6 @@ def home():
                 return f.read()
     except FileNotFoundError:
         return "index.html not found", 404
-
-@app.route('/admin')
-def admin_panel():
-    """Serve the admin panel"""
-    try:
-        try:
-            with open('templates/admin.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            with open('admin.html', 'r', encoding='utf-8') as f:
-                return f.read()
-    except FileNotFoundError:
-        return "admin.html not found", 404
 
 @app.route('/success')
 def success_page():
