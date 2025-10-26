@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasca Les Monges | Reserva tu Mesa - Cocina Mediterránea</title>
+    <!--
+    IMAGE REQUIREMENTS FOR /static/ FOLDER:
+    
+    ✅ HAVE:
+    - exquisit-color.png (200x200px) ✓
+    - monges-bicycle.png (400x396px) ✓
+    
+    STILL NEEDED:
+    - hero-paella.jpg (1920x1080px, beautiful paella close-up)
+    - dish-paella-marisco.jpg (800x600px, 4:3 ratio recommended)
+    - dish-gambones-ajillo.jpg (800x600px, 4:3 ratio recommended)
+    - dish-carpaccio-atun.jpg (800x600px, 4:3 ratio recommended)
+    - dish-pulpo-gallega.jpg (800x600px, 4:3 ratio recommended)
+    - dish-entrecot-solomillo.jpg (800x600px, 4:3 ratio recommended)
+    - menu.pdf (full restaurant menu PDF)
+    
+    OPTIONAL (for future enhancements):
+    - restaurant-interior.jpg (any size, you have low-res - that's fine!)
+    - restaurant-exterior.jpg (any size, you have low-res - that's fine!)
+    -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --sage-green: #8B9F6E;
+            --olive: #6B7A54;
+            --cream: #FAF8F3;
+            --paper: #F5F1E8;
+            --warm-brown: #5D4E47;
+            --light-brown: #8D7B6F;
+            --soft-white: #FFFBF5;
+            --accent-gold: #C9A86A;
+            --shadow: 0 2px 15px rgba(93, 78, 71, 0.08);
+        }
+        
+        /* Smooth scroll behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Selection color matching theme */
+        ::selection {
+            background: rgba(139, 159, 110, 0.3);
+            color: var(--warm-brown);
+        }
+        
+        ::-moz-selection {
+            background: rgba(139, 159, 110, 0.3);
+            color: var(--warm-brown);
+        }
+        
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--paper);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--sage-green);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--olive);
+        }
+
+        body {
+            font-family: 'Georgia', 'Palatino', 'Book Antiqua', serif;
+            color: var(--warm-brown);
+            background: var(--paper);
+            line-height: 1.8;
+            overflow-x: hidden;
+            position: relative;
+            letter-spacing: 0.02em;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(139, 159, 110, 0.015) 2px,
+                    rgba(139, 159, 110, 0.015) 4px
+                );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Decorative floating elements from menu */
+        .menu-decoration {
+            position: fixed;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .bicycle-float-1 {
+            top: 15%;
+            right: 2%;
+            width: 200px;
+            height: 200px;
+            animation: floatSlow 20s ease-in-out infinite;
+            opacity: 0.2;
+            filter: drop-shadow(2px 2px 4px rgba(139, 159, 110, 0.2));
+        }
+        
+        .bicycle-float-2 {
+            bottom: 15%;
+            left: 2%;
+            width: 200px;
+            height: 200px;
+            animation: floatSlow 25s ease-in-out infinite reverse;
+            transform: scaleX(-1);
+            opacity: 0.2;
+            filter: drop-shadow(2px 2px 4px rgba(139, 159, 110, 0.2));
+        }
+        
+        @keyframes floatSlow {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(2deg);
+            }
+        }
+
+        /* Mobile-First Header */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(250, 248, 243, 0.97);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            box-shadow: 0 1px 8px rgba(93, 78, 71, 0.06);
+            border-bottom: 1px solid rgba(139, 159, 110, 0.15);
+        }
+
+        .nav-container {
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-img {
+            height: 45px;
+            width: 45px;
+            object-fit: contain;
+        }
+
+        .logo-text {
+            font-size: 1.3rem;
+            color: var(--sage-green);
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            font-style: italic;
+            font-family: 'Brush Script MT', cursive, Georgia, serif;
+        }
+
+        .nav-menu {
+            display: none;
+        }
+
+        /* Mobile Reserve Button - Subtle vintage style */
+        .mobile-reserve-btn {
+            background: var(--sage-green);
+            color: var(--soft-white);
+            padding: 10px 22px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(107, 122, 84, 0.3);
+            box-shadow: 0 2px 12px rgba(139, 159, 110, 0.25);
+        }
+        
+        .mobile-reserve-btn:hover {
+            background: var(--olive);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(139, 159, 110, 0.3);
+        }
+
+        /* Hero Section - Cozy vintage style */
+        .hero {
+            margin-top: 56px;
+            min-height: 70vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(93, 64, 55, 0.5)),
+                        url('/static/hero-paella.jpg');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* Remove the hue overlay - let paella colors shine! */
+        .hero::before {
+            display: none;
+        }
+
+        .hero-content h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 12px rgba(0,0,0,0.6);
+            animation: fadeInUp 0.8s ease;
+            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            letter-spacing: 1px;
+        }
+        
+        .hero-logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 15px;
+            filter: drop-shadow(2px 2px 8px rgba(0,0,0,0.5));
+            animation: fadeInUp 0.6s ease;
+            object-fit: contain;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-content .subtitle {
+            font-size: 1rem;
+            font-style: italic;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+
+        /* Availability badge - more inviting */
+        .urgency-badge {
+            background: rgba(139, 159, 110, 0.9);
+            color: var(--soft-white);
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            display: inline-block;
+            margin-bottom: 20px;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        /* CTA Button in Hero - Elegant and subtle */
+        .hero-cta {
+            background: var(--sage-green);
+            color: var(--soft-white);
+            padding: 16px 45px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 500;
+            display: inline-block;
+            margin-top: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            letter-spacing: 0.5px;
+        }
+
+        .hero-cta:active {
+            transform: scale(0.97);
+        }
+        
+        .hero-cta:hover {
+            background: var(--olive);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.3);
+        }
+
+        /* Social Proof Section */
+        .social-proof {
+            background: rgba(139, 159, 110, 0.2);
+            padding: 20px 15px;
+            text-align: center;
+            border-top: 1px solid rgba(139, 159, 110, 0.3);
+            border-bottom: 1px solid rgba(139, 159, 110, 0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        .social-proof-item {
+            display: inline-block;
+            margin: 0 10px;
+            font-size: 0.85rem;
+            color: var(--warm-brown);
+        }
+
+        .rating {
+            color: var(--accent-gold);
+            font-weight: bold;
+        }
+
+        /* Story Section - Cozy */
+        .story-section {
+            padding: 50px 20px;
+            text-align: center;
+            background: var(--cream);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .story-section::before {
+            content: '~';
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2rem;
+            color: var(--sage-green);
+            opacity: 0.3;
+        }
+
+        .story-title {
+            font-size: 2rem;
+            color: var(--warm-brown);
+            margin-bottom: 25px;
+            font-weight: 300;
+            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            position: relative;
+        }
+        
+        .story-title::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--sage-green);
+            margin: 15px auto 0;
+            opacity: 0.5;
+        }
+
+        .story-text {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--warm-brown);
+            margin-bottom: 15px;
+        }
+
+        .story-text strong {
+            color: var(--sage-green);
+        }
+
+        /* Trust Indicators - Vintage */
+        .trust-indicators {
+            display: flex;
+            justify-content: space-around;
+            padding: 40px 15px;
+            background: var(--cream);
+            flex-wrap: wrap;
+            gap: 25px;
+            border-top: 1px solid rgba(139, 159, 110, 0.2);
+            border-bottom: 1px solid rgba(139, 159, 110, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+
+        .trust-item {
+            flex: 1;
+            min-width: 140px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .trust-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .trust-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            transition: transform 0.3s ease;
+        }
+        
+        .trust-item:hover .trust-icon {
+            transform: scale(1.15);
+        }
+
+        .trust-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--warm-brown);
+            margin-bottom: 5px;
+        }
+
+        .trust-text {
+            font-size: 0.85rem;
+            color: var(--light-brown);
+            font-style: italic;
+        }
+
+        /* Menu Preview - Vintage card style */
+        .menu-section {
+            padding: 50px 15px;
+            background: var(--paper);
+            position: relative;
+            z-index: 2;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            color: var(--warm-brown);
+            margin-bottom: 10px;
+            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-weight: 300;
+        }
+
+        .section-header p {
+            font-size: 0.95rem;
+            color: var(--light-brown);
+            font-style: italic;
+        }
+
+        .menu-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 15px;
+            padding-bottom: 15px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .menu-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .menu-scroll::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 2px;
+        }
+
+        .menu-scroll::-webkit-scrollbar-thumb {
+            background: var(--sage-green);
+            border-radius: 2px;
+        }
+
+        .menu-card {
+            min-width: 250px;
+            background: var(--cream);
+            border-radius: 8px;
+            padding: 0;
+            box-shadow: 0 3px 15px rgba(93, 64, 55, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(139, 159, 110, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .menu-card-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-bottom: 2px solid rgba(139, 159, 110, 0.2);
+            background: linear-gradient(135deg, var(--cream), var(--paper));
+        }
+        
+        /* Fallback for missing images */
+        .menu-card-image[src*="placeholder"] {
+            background: linear-gradient(135deg, #f0e6d8, #e8dcc8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--light-brown);
+            font-size: 3rem;
+        }
+        
+        .menu-card-content {
+            padding: 20px;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(93, 64, 55, 0.15);
+        }
+        
+        .menu-card::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, var(--sage-green) 30%, transparent 30%);
+            opacity: 0.1;
+            z-index: 1;
+        }
+
+        .menu-card:active {
+            transform: scale(0.98);
+        }
+
+        .menu-card h3 {
+            color: var(--olive);
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .menu-card p {
+            font-size: 0.9rem;
+            color: var(--warm-brown);
+            line-height: 1.6;
+        }
+
+        /* Testimonials - Vintage style */
+        .testimonials {
+            padding: 50px 15px;
+            background: var(--cream);
+            position: relative;
+            z-index: 2;
+        }
+
+        .testimonial-card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(93, 64, 55, 0.08);
+            border-left: 3px solid var(--sage-green);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .testimonial-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 16px rgba(93, 64, 55, 0.12);
+        }
+
+        .testimonial-text {
+            font-style: italic;
+            color: var(--warm-brown);
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        
+        .testimonial-text::before {
+            content: '"';
+            font-size: 2rem;
+            color: var(--sage-green);
+            opacity: 0.3;
+            line-height: 0;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+
+        .testimonial-author {
+            font-weight: 600;
+            color: var(--olive);
+            font-size: 0.9rem;
+        }
+
+        .stars {
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+        }
+
+        /* Location Section - Vintage */
+        .location-section {
+            padding: 50px 15px;
+            background: var(--cream);
+            position: relative;
+            z-index: 2;
+        }
+
+        .location-info {
+            margin-bottom: 30px;
+        }
+
+        .location-info h2 {
+            font-size: 1.8rem;
+            color: var(--warm-brown);
+            margin-bottom: 20px;
+            text-align: center;
+            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-weight: 300;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid rgba(139, 159, 110, 0.2);
+        }
+
+        .contact-item i {
+            font-size: 1.2rem;
+            color: var(--olive);
+        }
+
+        .map-container {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(93, 64, 55, 0.15);
+            height: 250px;
+            border: 1px solid rgba(139, 159, 110, 0.2);
+        }
+
+        /* Reservation Form - Cozy vintage */
+        .reservation-section {
+            padding: 50px 15px;
+            background: var(--paper);
+            position: relative;
+            z-index: 2;
+        }
+
+        .reservation-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: var(--cream);
+            padding: 35px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(93, 64, 55, 0.1);
+            border: 1px solid rgba(139, 159, 110, 0.2);
+            position: relative;
+        }
+        
+        .reservation-container::before {
+            content: '~';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            color: var(--sage-green);
+            opacity: 0.2;
+            font-family: 'Brush Script MT', cursive;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-header h2 {
+            font-size: 2rem;
+            color: var(--warm-brown);
+            margin-bottom: 10px;
+            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-weight: 300;
+        }
+
+        .limited-spots {
+            background: var(--sage-green);
+            color: white;
+            padding: 10px 22px;
+            border-radius: 25px;
+            font-size: 1rem;
+            display: inline-block;
+            margin-bottom: 15px;
+            font-weight: 500;
+            border: 2px solid var(--olive);
+        }
+
+        .form-header p {
+            color: var(--light-brown);
+            font-style: italic;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--warm-brown);
+            font-size: 0.95rem;
+            font-weight: 500;
+            position: relative;
+            padding-left: 8px;
+        }
+        
+        label::before {
+            content: '◆';
+            position: absolute;
+            left: -8px;
+            color: var(--sage-green);
+            font-size: 0.7rem;
+            opacity: 0.5;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid rgba(139, 159, 110, 0.3);
+            border-radius: 6px;
+            font-size: 16px; /* Prevents zoom on iOS */
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--sage-green);
+            box-shadow: 0 0 0 3px rgba(139, 159, 110, 0.15);
+        }
+
+        /* Phone input group with country code */
+        .phone-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .country-select {
+            flex: 0 0 120px;
+        }
+
+        .phone-input {
+            flex: 1;
+        }
+
+        /* Error message styling - vintage */
+        .error-message {
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 2px solid rgba(220, 53, 69, 0.3);
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+            padding: 14px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: left;
+            display: none;
+            font-size: 0.95rem;
+            position: relative;
+        }
+        
+        .error-message::before {
+            content: '⚠';
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { 
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* People Selector - Vintage style */
+        .people-selector {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(139, 159, 110, 0.15);
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid rgba(139, 159, 110, 0.2);
+        }
+
+        .people-btn {
+            width: 50px;
+            height: 50px;
+            min-width: 50px;
+            border: 2px solid var(--olive);
+            background: white;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            color: var(--olive);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .people-btn:hover {
+            background: var(--sage-green);
+            color: var(--warm-brown);
+        }
+
+        .people-btn:active {
+            transform: scale(0.9);
+        }
+
+        .people-display {
+            text-align: center;
+            flex: 1;
+        }
+
+        .people-number {
+            font-size: 2.5rem;
+            color: var(--sage-green);
+            display: block;
+            font-weight: 300;
+            animation: none;
+        }
+
+        .people-number.animate {
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .people-label {
+            font-size: 0.9rem;
+            color: var(--warm-brown);
+        }
+
+        /* People visual animation */
+        .people-visual {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            border: 1px solid rgba(139, 159, 110, 0.2);
+        }
+
+        .person-icon {
+            font-size: 1.4rem;
+            opacity: 0.2;
+            transition: all 0.3s ease;
+            transform: scale(0.8);
+        }
+
+        .person-icon.active {
+            opacity: 1;
+            transform: scale(1);
+            animation: personAppear 0.3s ease;
+        }
+
+        @keyframes personAppear {
+            0% { 
+                transform: scale(0) rotate(180deg);
+                opacity: 0;
+            }
+            50% { 
+                transform: scale(1.2) rotate(90deg);
+            }
+            100% { 
+                transform: scale(1) rotate(0);
+                opacity: 1;
+            }
+        }
+
+        /* Time Selector - Vintage */
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .time-slot {
+            padding: 12px;
+            border: 1px solid rgba(139, 159, 110, 0.3);
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .time-slot.selected {
+            background: var(--sage-green);
+            color: var(--warm-brown);
+            border-color: var(--olive);
+            font-weight: 500;
+        }
+
+        .time-slot:active {
+            transform: scale(0.95);
+        }
+
+        /* Submit Button - Vintage style */
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            background: var(--sage-green);
+            color: var(--soft-white);
+            border: 1px solid rgba(107, 122, 84, 0.3);
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 25px;
+            box-shadow: 0 3px 12px rgba(139, 159, 110, 0.25);
+            position: relative;
+            font-family: Georgia, serif;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .submit-btn:hover {
+            background: var(--olive);
+            color: var(--soft-white);
+            box-shadow: 0 4px 16px rgba(139, 159, 110, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:disabled {
+            background: #d4cfc8;
+            border-color: #b8b3ac;
+            cursor: not-allowed;
+            color: var(--light-brown);
+        }
+        
+        .submit-btn:disabled::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 20px;
+            margin-top: -8px;
+            border: 2px solid var(--light-brown);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Security Badge */
+        .security-badge {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: var(--light-brown);
+            font-style: italic;
+        }
+
+        .security-badge i {
+            color: var(--olive);
+            margin-right: 5px;
+        }
+        
+        /* Handwritten accent elements */
+        .handwritten-accent {
+            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            color: var(--olive);
+            font-size: 1.1rem;
+            margin: 10px 0;
+            opacity: 0.8;
+        }
+        
+        /* Vintage paper effect on cards */
+        .vintage-card {
+            position: relative;
+        }
+        
+        .vintage-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 1px,
+                rgba(139, 159, 110, 0.03) 1px,
+                rgba(139, 159, 110, 0.03) 2px
+            );
+            pointer-events: none;
+            border-radius: inherit;
+        }
+        
+        /* Decorative corner fold effect */
+        .corner-fold {
+            position: relative;
+            overflow: visible;
+        }
+        
+        .corner-fold::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 20px 20px 0;
+            border-color: transparent rgba(139, 159, 110, 0.2) transparent transparent;
+            transition: border-width 0.3s ease;
+        }
+        
+        .corner-fold:hover::before {
+            border-width: 0 25px 25px 0;
+        }
+
+        /* Footer - Vintage */
+        .footer {
+            background: var(--olive);
+            color: var(--cream);
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            font-family: 'Brush Script MT', cursive, Georgia, serif;
+        }
+        
+        .footer-logo-img {
+            width: 60px;
+            height: auto;
+            margin: 0 auto 15px;
+            opacity: 0.6;
+            filter: grayscale(100%) brightness(2);
+        }
+
+        .footer a {
+            color: var(--cream);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer a:hover {
+            color: var(--sage-green);
+        }
+
+        /* Floating Reserve Button - Vintage style */
+        .floating-reserve {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--sage-green);
+            color: var(--soft-white);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 16px rgba(139, 159, 110, 0.3);
+            z-index: 999;
+            text-decoration: none;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(107, 122, 84, 0.3);
+        }
+        
+        .floating-reserve:hover {
+            transform: scale(1.08);
+            background: var(--olive);
+            box-shadow: 0 4px 20px rgba(139, 159, 110, 0.4);
+        }
+
+        /* Desktop Adjustments - maintaining cozy vintage feel */
+        @media (min-width: 768px) {
+            .nav-container {
+                padding: 15px 40px;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .nav-menu {
+                display: flex;
+                list-style: none;
+                gap: 35px;
+                align-items: center;
+                margin: 0;
+                padding: 0;
+            }
+
+            .nav-menu a {
+                text-decoration: none;
+                color: var(--warm-brown);
+                font-size: 0.95rem;
+                transition: color 0.3s ease;
+                position: relative;
+            }
+
+            .nav-menu a::after {
+                content: '';
+                position: absolute;
+                bottom: -5px;
+                left: 0;
+                width: 0;
+                height: 2px;
+                background: var(--sage-green);
+                transition: width 0.3s ease;
+            }
+
+            .nav-menu a:hover {
+                color: var(--olive);
+            }
+            
+            .nav-menu a:hover::after {
+                width: 100%;
+            }
+
+            .hero {
+                margin-top: 70px;
+                min-height: 85vh;
+            }
+
+            .hero-content h1 {
+                font-size: 4rem;
+            }
+
+            .hero-content .subtitle {
+                font-size: 1.4rem;
+            }
+            
+            .story-section,
+            .menu-section,
+            .testimonials,
+            .location-section,
+            .reservation-section {
+                padding: 70px 40px;
+            }
+            
+            .section-header h2,
+            .story-title,
+            .form-header h2,
+            .location-info h2 {
+                font-size: 2.5rem;
+            }
+
+            .menu-scroll {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                overflow-x: visible;
+                gap: 25px;
+            }
+
+            .location-section .container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 50px;
+                max-width: 1200px;
+                margin: 0 auto;
+                align-items: center;
+            }
+
+            .map-container {
+                height: 400px;
+            }
+
+            .floating-reserve {
+                display: none;
+            }
+
+            .time-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .people-selector {
+                max-width: 450px;
+                margin: 15px auto;
+            }
+            
+            .reservation-container {
+                padding: 45px;
+            }
+            
+            .testimonials {
+                max-width: 900px;
+                margin: 0 auto;
+            }
+        }
+        
+        /* Extra large screens */
+        @media (min-width: 1200px) {
+            .hero-content h1 {
+                font-size: 4.5rem;
+            }
+            
+            .story-section,
+            .menu-section,
+            .trust-indicators {
+                max-width: 1200px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Decorative floating elements inspired by menu -->
+    <img src="/static/monges-bicycle-medium.png" alt="" class="menu-decoration bicycle-float-1" aria-hidden="true">
+    <img src="/static/monges-bicycle-medium.png" alt="" class="menu-decoration bicycle-float-2" aria-hidden="true">
+
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-container">
+            <div class="logo-container">
+                <img src="/static/monges-bicycle-small.png" alt="Les Monges" class="logo-img">
+                <div class="logo-text">Les Monges</div>
+            </div>
+            <nav>
+                <ul class="nav-menu">
+                    <li><a href="#nosotros">Nosotros</a></li>
+                    <li><a href="#carta">Carta</a></li>
+                    <li><a href="#contacto">Contacto</a></li>
+                </ul>
+            </nav>
+            <a href="#reservar" class="mobile-reserve-btn">Reservar</a>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-content">
+            <img src="/static/exquisit-color.png" alt="L'Exquisit Mediterrani" class="hero-logo">
+            <h1>Tasca Les Monges</h1>
+            <p class="subtitle">Auténtica cocina mediterránea en Dénia</p>
+            <a href="#reservar" class="hero-cta">Reservar Mesa</a>
+        </div>
+    </section>
+
+    <!-- Social Proof Bar -->
+    <div class="social-proof">
+        <span class="social-proof-item">
+            <span class="rating">★★★★★</span> 4.8/5
+        </span>
+        <span class="social-proof-item" style="margin: 0 5px;">•</span>
+        <span class="social-proof-item">
+            <strong>1,247</strong> valoraciones
+        </span>
+        <span class="social-proof-item" style="margin: 0 5px;">•</span>
+        <span class="social-proof-item">
+            Reservas desde <strong>2019</strong>
+        </span>
+    </div>
+
+    <!-- Story -->
+    <section class="story-section" id="nosotros">
+        <h2 class="story-title">Nuestra Historia</h2>
+        <p class="story-text">
+            En <strong>Tasca Les Monges</strong>, cada plato es una celebración de la 
+            <strong>auténtica cocina mediterránea</strong>, preparada con cariño y tradición.
+        </p>
+        <p class="story-text">
+            Ubicados en el corazón de Dénia, te invitamos a disfrutar de sabores 
+            que han pasado de generación en generación.
+        </p>
+    </section>
+
+    <!-- Trust Indicators -->
+    <div class="trust-indicators">
+        <div class="trust-item">
+            <div class="trust-icon">🍽️</div>
+            <div class="trust-title">Cocina Casera</div>
+            <div class="trust-text">Recetas tradicionales</div>
+        </div>
+        <div class="trust-item">
+            <div class="trust-icon">👨‍🍳</div>
+            <div class="trust-title">Chef Local</div>
+            <div class="trust-text">20 años de experiencia</div>
+        </div>
+        <div class="trust-item">
+            <div class="trust-icon">🌿</div>
+            <div class="trust-title">Productos Frescos</div>
+            <div class="trust-text">Del mercado a tu mesa</div>
+        </div>
+    </div>
+
+    <!-- Menu -->
+    <section class="menu-section" id="carta">
+        <div class="section-header">
+            <h2>Nuestra Carta</h2>
+            <p class="handwritten-accent">Productos frescos del día</p>
+        </div>
+        <div class="menu-scroll">
+            <div class="menu-card vintage-card corner-fold">
+                <img src="/static/dish-paella-marisco.jpg" alt="Paella de Marisco" class="menu-card-image" loading="lazy">
+                <div class="menu-card-content">
+                    <h3>🥘 Paella de Marisco</h3>
+                    <p>Mariscos frescos de la lonja. Quizás la mejor paella de Dénia según nuestros clientes.</p>
+                </div>
+            </div>
+            <div class="menu-card vintage-card corner-fold">
+                <img src="/static/dish-gambones-ajillo.jpg" alt="Gambones al Ajillo" class="menu-card-image" loading="lazy">
+                <div class="menu-card-content">
+                    <h3>🦐 Gambones al Ajillo</h3>
+                    <p>Gambones rojos en aceite de ajo. Un clásico que nunca falla.</p>
+                </div>
+            </div>
+            <div class="menu-card vintage-card corner-fold">
+                <img src="/static/dish-carpaccio-atun.jpg" alt="Carpaccio de Atún Rojo" class="menu-card-image" loading="lazy">
+                <div class="menu-card-content">
+                    <h3>🐟 Carpaccio de Atún</h3>
+                    <p>Atún rojo fresco en láminas finas. Elegante y delicioso.</p>
+                </div>
+            </div>
+            <div class="menu-card vintage-card corner-fold">
+                <img src="/static/dish-pulpo-gallega.jpg" alt="Pulpo a la Gallega" class="menu-card-image" loading="lazy">
+                <div class="menu-card-content">
+                    <h3>🐙 Pulpo a la Gallega</h3>
+                    <p>Tierno pulpo al estilo gallego. Tradición en cada bocado.</p>
+                </div>
+            </div>
+            <div class="menu-card vintage-card corner-fold">
+                <img src="/static/dish-entrecot-solomillo.jpg" alt="Entrecot de Solomillo" class="menu-card-image" loading="lazy">
+                <div class="menu-card-content">
+                    <h3>🥩 Entrecot de Solomillo</h3>
+                    <p>Carne premium al punto perfecto. Jugoso y lleno de sabor.</p>
+                </div>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/static/menu.pdf" target="_blank" class="hero-cta" style="display: inline-block; font-size: 1rem; padding: 14px 35px;">
+                📋 Ver Carta Completa
+            </a>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials">
+        <div class="section-header">
+            <h2>Palabras de Nuestros Comensales</h2>
+        </div>
+        <div class="testimonial-card vintage-card">
+            <div class="stars">★★★★★</div>
+            <p class="testimonial-text">Un lugar encantador con comida exquisita. La paella estaba deliciosa y el trato fue familiar y cercano.</p>
+            <p class="testimonial-author">- María G.</p>
+        </div>
+        <div class="testimonial-card vintage-card">
+            <div class="stars">★★★★★</div>
+            <p class="testimonial-text">Ambiente acogedor y platos que saben a tradición. Volveremos sin duda.</p>
+            <p class="testimonial-author">- John S.</p>
+        </div>
+    </section>
+
+    <!-- Location -->
+    <section class="location-section" id="contacto">
+        <div class="container">
+            <div class="location-info">
+                <h2>Ven a Visitarnos</h2>
+                <p class="handwritten-accent">Estaremos encantados de recibirte</p>
+                <div class="contact-item vintage-card">
+                    <i>📍</i>
+                    <span>Calle Loreto, 29<br>03700 Dénia, Alicante</span>
+                </div>
+                <div class="contact-item vintage-card">
+                    <i>📞</i>
+                    <span><a href="tel:+34965785731" style="color: var(--olive); text-decoration: none;">965 78 57 31</a></span>
+                </div>
+                <div class="contact-item vintage-card">
+                    <i>🕐</i>
+                    <span>Martes a Domingo<br>12:00 - 23:00<br><small style="opacity: 0.7;">(Lunes cerrado)</small></span>
+                </div>
+            </div>
+            <div class="map-container">
+                <iframe 
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3094.7682885366!2d0.10305431531913!3d38.84126897957!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd61e81c3b3b3b3b%3A0x1234567890abcdef!2sCarrer%20de%20Loreto%2C%2029%2C%2003700%20D%C3%A9nia%2C%20Alicante!5e0!3m2!1ses!2ses!4v1234567890"
+                    width="100%" 
+                    height="100%" 
+                    style="border:0;" 
+                    allowfullscreen="" 
+                    loading="lazy">
+                </iframe>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reservation -->
+    <section class="reservation-section" id="reservar">
+        <div class="reservation-container vintage-card">
+            <div class="form-header">
+                <h2>Reserva tu Mesa</h2>
+                <p class="handwritten-accent">Confirmación en 2 minutos</p>
+            </div>
+            
+            <form id="reservaForm">
+                <div class="error-message" id="errorMessage"></div>
+                
+                <div class="form-group">
+                    <label for="nombre">Tu nombre</label>
+                    <input type="text" id="nombre" name="nombre" required placeholder="Ej: María García">
+                </div>
+
+                <div class="form-group">
+                    <label for="telefono">Teléfono móvil</label>
+                    <div class="phone-group">
+                        <select id="countryCode" class="country-select">
+                            <option value="+34">🇪🇸 +34</option>
+                            <option value="+44">🇬🇧 +44</option>
+                            <option value="+31">🇳🇱 +31</option>
+                            <option value="+33">🇫🇷 +33</option>
+                            <option value="+49">🇩🇪 +49</option>
+                            <option value="+39">🇮🇹 +39</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="other">Otro...</option>
+                        </select>
+                        <input type="tel" id="telefono" name="telefono" class="phone-input" required placeholder="612 345 678">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Cuántos sois?</label>
+                    <div class="people-selector">
+                        <button type="button" class="people-btn" id="decreaseBtn">−</button>
+                        <div class="people-display">
+                            <span class="people-number" id="peopleNumber">2</span>
+                            <span class="people-label">personas</span>
+                        </div>
+                        <button type="button" class="people-btn" id="increaseBtn">+</button>
+                    </div>
+                    <input type="hidden" id="personas" name="personas" value="2">
+                    <div class="people-visual" id="peopleVisual">
+                        <span class="person-icon active">👤</span>
+                        <span class="person-icon active">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                        <span class="person-icon">👤</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fecha">Fecha</label>
+                    <input type="date" id="fecha" name="fecha" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Hora preferida</label>
+                    <div class="time-grid">
+                        <div class="time-slot" data-time="13:00">13:00</div>
+                        <div class="time-slot selected" data-time="13:30">13:30</div>
+                        <div class="time-slot" data-time="14:00">14:00</div>
+                        <div class="time-slot" data-time="20:30">20:30</div>
+                        <div class="time-slot" data-time="21:00">21:00</div>
+                        <div class="time-slot" data-time="21:30">21:30</div>
+                    </div>
+                    <input type="hidden" id="hora" name="hora" value="13:30">
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    Confirmar Reserva Ahora
+                </button>
+
+                <div class="security-badge">
+                    <i>🔒</i> Reserva 100% segura y confirmación instantánea
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-logo">Tasca Les Monges</div>
+        <img src="/static/exquisit-color.png" alt="L'Exquisit Mediterrani" class="footer-logo-img">
+        <p style="margin-top: 15px;">Calle Loreto 29, Dénia</p>
+        <p><a href="tel:+34965785731">📞 965 78 57 31</a></p>
+        <p style="margin-top: 10px; font-style: italic; opacity: 0.8;">Mar-Dom: 12:00-23:00 · Lunes cerrado</p>
+        <p style="margin-top: 20px; opacity: 0.7; font-size: 0.9rem;">© 2025 Tasca Les Monges</p>
+        <p style="font-size: 0.85rem; opacity: 0.6; margin-top: 5px;">Hecho con ❤️ en Dénia</p>
+    </footer>
+
+    <!-- Floating Reserve Button -->
+    <a href="#reservar" class="floating-reserve">📅</a>
+
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // People selector with animation
+        const decreaseBtn = document.getElementById('decreaseBtn');
+        const increaseBtn = document.getElementById('increaseBtn');
+        const peopleNumber = document.getElementById('peopleNumber');
+        const peopleInput = document.getElementById('personas');
+        const peopleIcons = document.querySelectorAll('.person-icon');
+        
+        let currentPeople = 2;
+        
+        function updatePeople(newValue) {
+            if (newValue < 1 || newValue > 12) return;
+            
+            currentPeople = newValue;
+            peopleNumber.textContent = currentPeople;
+            peopleInput.value = currentPeople;
+            
+            // Add animation to number
+            peopleNumber.classList.remove('animate');
+            void peopleNumber.offsetWidth; // Trigger reflow
+            peopleNumber.classList.add('animate');
+            
+            // Update person icons with animation
+            peopleIcons.forEach((icon, index) => {
+                if (index < currentPeople) {
+                    icon.classList.add('active');
+                } else {
+                    icon.classList.remove('active');
+                }
+            });
+        }
+        
+        decreaseBtn.addEventListener('click', () => updatePeople(currentPeople - 1));
+        increaseBtn.addEventListener('click', () => updatePeople(currentPeople + 1));
+
+        // Country code handling
+        const countrySelect = document.getElementById('countryCode');
+        const phoneInput = document.getElementById('telefono');
+        
+        countrySelect.addEventListener('change', function() {
+            if (this.value === 'other') {
+                // Hide country selector and expand phone input
+                this.style.display = 'none';
+                phoneInput.placeholder = '+XX XXX XXX XXX';
+                phoneInput.style.width = '100%';
+            }
+        });
+
+        // Time slot selector
+        const timeSlots = document.querySelectorAll('.time-slot');
+        const horaInput = document.getElementById('hora');
+        
+        timeSlots.forEach(slot => {
+            slot.addEventListener('click', () => {
+                // Only allow clicking visible slots
+                if (slot.style.display === 'none') return;
+                
+                timeSlots.forEach(s => s.classList.remove('selected'));
+                slot.classList.add('selected');
+                horaInput.value = slot.dataset.time;
+            });
+        });
+
+        // Dynamic date and time slot management
+        const dateInput = document.getElementById('fecha');
+        const now = new Date();
+        const currentHour = now.getHours();
+        
+        // Function to update available time slots based on selected date
+        function updateAvailableTimeSlots() {
+            const selectedDate = new Date(dateInput.value + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            selectedDate.setHours(0, 0, 0, 0);
+            
+            const isToday = selectedDate.getTime() === today.getTime();
+            
+            timeSlots.forEach(slot => {
+                const slotTime = slot.dataset.time;
+                const slotHour = parseInt(slotTime.split(':')[0]);
+                
+                if (isToday) {
+                    // Today's logic based on current time
+                    if (currentHour < 12) {
+                        // Before noon - show all slots
+                        slot.style.display = '';
+                    } else if (currentHour >= 12 && currentHour < 19) {
+                        // Between noon and 7pm - only show evening slots (after 19:00)
+                        if (slotHour >= 19) {
+                            slot.style.display = '';
+                        } else {
+                            slot.style.display = 'none';
+                        }
+                    } else {
+                        // After 7pm - no slots available for today
+                        slot.style.display = 'none';
+                    }
+                } else {
+                    // Future dates - show all slots
+                    slot.style.display = '';
+                }
+            });
+            
+            // Auto-select first visible slot
+            const firstVisible = Array.from(timeSlots).find(slot => slot.style.display !== 'none');
+            if (firstVisible) {
+                timeSlots.forEach(s => s.classList.remove('selected'));
+                firstVisible.classList.add('selected');
+                horaInput.value = firstVisible.dataset.time;
+            }
+        }
+        
+        // Set date options - allow today if before 7pm
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        if (currentHour < 19) {
+            // Before 7pm - allow today
+            dateInput.setAttribute('min', todayStr);
+            dateInput.value = todayStr;
+        } else {
+            // After 7pm - minimum is tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            dateInput.setAttribute('min', tomorrowStr);
+            dateInput.value = tomorrowStr;
+        }
+        
+        // Update slots when date changes
+        dateInput.addEventListener('change', updateAvailableTimeSlots);
+        
+        // Initial update
+        updateAvailableTimeSlots();
+
+        // Subtle rotating messages
+        const urgencyElements = document.querySelectorAll('.urgency-badge, .limited-spots');
+        const messages = [
+            '🍽️ Reserva fácil y rápida',
+            '✨ Reserva en 2 minutos',
+            '📅 Confirmación inmediata',
+            '👨‍🍳 Cocina tradicional'
+        ];
+        
+        let messageIndex = 0;
+        setInterval(() => {
+            messageIndex = (messageIndex + 1) % messages.length;
+            urgencyElements.forEach(el => {
+                el.style.transition = 'opacity 0.5s ease';
+                el.style.opacity = '0';
+                setTimeout(() => {
+                    el.textContent = messages[messageIndex];
+                    el.style.opacity = '1';
+                }, 500);
+            });
+        }, 8000);
+
+        // Form submission
+        document.getElementById('reservaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Procesando...';
+            
+            // Hide any previous error
+            errorMessage.classList.remove('show');
+            
+            // Get the phone number
+            let phoneNumber = document.getElementById('telefono').value.replace(/\s/g, '');
+            
+            // Only add country code if not "other" AND phone doesn't already start with +
+            if (countrySelect.value !== 'other' && !phoneNumber.startsWith('+')) {
+                phoneNumber = countrySelect.value + phoneNumber;
+            }
+            
+            const formData = {
+                nombre: document.getElementById('nombre').value,
+                telefono: phoneNumber,
+                personas: document.getElementById('personas').value,
+                fecha: document.getElementById('fecha').value,
+                hora: document.getElementById('hora').value
+            };
+            
+            console.log('Sending data:', formData);
+            
+            try {
+                const response = await fetch('/reservar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Check if it's a large group that needs approval
+                    if (result.large_group) {
+                        // Show special message for large groups
+                        window.location.href = '/success?large_group=true&personas=' + formData.personas;
+                    } else {
+                        // Regular success for small groups
+                        window.location.href = '/success';
+                    }
+                } else {
+                    // Show error message on the form
+                    errorMessage.textContent = result.message || 'Error al procesar la reserva. Por favor, intenta de nuevo.';
+                    errorMessage.classList.add('show');
+                    
+                    // Re-enable the button
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Confirmar Reserva Ahora';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = 'Error al conectar con el servidor. Por favor, intenta de nuevo.';
+                errorMessage.classList.add('show');
+                
+                // Re-enable the button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Confirmar Reserva Ahora';
+            }
+        });
+        
+        // Handle missing images gracefully
+        document.querySelectorAll('img').forEach(img => {
+            img.onerror = function() {
+                if (this.classList.contains('menu-card-image')) {
+                    // Create a colored placeholder for menu images
+                    this.style.background = 'linear-gradient(135deg, #f0e6d8, #e8dcc8)';
+                    this.style.display = 'flex';
+                    this.style.alignItems = 'center';
+                    this.style.justifyContent = 'center';
+                    this.alt = '🍽️';
+                } else if (this.classList.contains('menu-decoration')) {
+                    // Hide decorative elements if not available
+                    this.style.display = 'none';
+                } else if (this.classList.contains('logo-img') || this.classList.contains('hero-logo')) {
+                    // Keep logos but make them smaller if not loading
+                    this.style.opacity = '0';
+                }
+            };
+        });
+    </script>
+</body>
+</html>
