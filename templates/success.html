@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva Enviada - Les Monges</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #faf8f3 0%, #fff 100%);
+            color: #3a3330;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .success-container {
+            background: white;
+            padding: 60px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .checkmark {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 30px;
+            background: #32cd32;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pop 0.5s ease-out 0.2s backwards;
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .checkmark svg {
+            width: 50px;
+            height: 50px;
+            stroke: white;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: draw 0.8s ease-out 0.7s forwards;
+        }
+
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2a2523;
+            margin-bottom: 20px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .message {
+            font-size: 1.2rem;
+            color: #5a524b;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .phone-icon {
+            display: inline-block;
+            animation: ring 2s ease-in-out infinite;
+            font-size: 1.5rem;
+            margin: 0 8px;
+        }
+
+        @keyframes ring {
+            0%, 100% { transform: rotate(0deg); }
+            10%, 30% { transform: rotate(-10deg); }
+            20%, 40% { transform: rotate(10deg); }
+        }
+
+        .highlight {
+            color: #32cd32;
+            font-weight: 500;
+        }
+
+        .wave-decoration {
+            width: 60px;
+            height: 2px;
+            background-color: #32cd32;
+            margin: 30px auto;
+            position: relative;
+        }
+
+        .wave-decoration::before,
+        .wave-decoration::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background-color: #32cd32;
+            top: 0;
+        }
+
+        .wave-decoration::before {
+            left: -25px;
+        }
+
+        .wave-decoration::after {
+            right: -25px;
+        }
+
+        .btn-home {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 30px;
+            background-color: transparent;
+            color: #5a524b;
+            text-decoration: none;
+            border: 2px solid #d4cfc8;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .btn-home:hover {
+            background-color: #32cd32;
+            border-color: #32cd32;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(50, 205, 50, 0.3);
+        }
+
+        .sms-animation {
+            margin: 30px 0;
+            font-size: 3rem;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @media (max-width: 600px) {
+            .success-container {
+                padding: 40px 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .message {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="checkmark">
+            <svg viewBox="0 0 52 52">
+                <path d="M14 27 L22 35 L38 16" />
+            </svg>
+        </div>
+        
+        <h1>¡PERFECTO!</h1>
+        
+        <div class="wave-decoration"></div>
+        
+        <p class="message" id="mainMessage">
+            ¡Casi listo! Solo falta un paso más
+        </p>
+        
+        <div class="sms-animation">📱</div>
+        
+        <p class="message" id="actionMessage">
+            <strong>Revisa tu móvil</strong>
+        </p>
+        
+        <p class="message" id="instructionMessage">
+            Te acabamos de enviar un SMS con un enlace.<br>
+            Haz clic en el enlace y confirma tu reserva ✨
+        </p>
+        
+        <div class="wave-decoration"></div>
+        
+        <a href="/" class="btn-home">Volver al inicio</a>
+    </div>
+    
+    <script>
+        // Check if it's a large group reservation
+        const urlParams = new URLSearchParams(window.location.search);
+        const isLargeGroup = urlParams.get('large_group');
+        const personas = urlParams.get('personas');
+        
+        if (isLargeGroup === 'true') {
+            // Update messages for large group
+            document.getElementById('mainMessage').innerHTML = `¡Genial! Un grupo de <span class="highlight">${personas} personas</span> 🎉`;
+            document.getElementById('actionMessage').innerHTML = '<strong>Confirma por SMS</strong>';
+            document.getElementById('instructionMessage').innerHTML = `Haz clic en el enlace del SMS que te enviamos.<br>Revisaremos disponibilidad y te confirmamos enseguida 😊`;
+        }
+    </script>
+</body>
+</html>
