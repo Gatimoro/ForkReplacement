@@ -371,7 +371,7 @@ def create_reservation():
         log_action(reservation_id, 'created', 'web_form', f'Group size: {personas}, Auto-approved: {not is_large}')
         
         # Create confirmation link
-        confirmation_link = f"{DOMAIN}/confirm/{confirmation_token}"
+        confirmation_link = f"{DOMAIN}confirm/{confirmation_token}"
         
         # Format date for display
         fecha_display = format_date_spanish(data['fecha'])
@@ -600,6 +600,155 @@ def confirm_reservation(token):
                             </div>
                             <div class="actions">
                                 <p><small>¿Necesitas cancelar tu reserva?</small></p>
+                                <a href="{cancel_link}" class="cancel-btn">✕ Cancelar mi Reserva</a>
+                            </div>
+                            <a href="/">Volver al inicio</a>
+                        </div>
+                    </body>
+                    </html>
+                '''
+        
+        # POST request: Actually confirm (only real users will POST)
+        if request.method == 'POST':
+            with get_db() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT * FROM reservations 
+                    WHERE confirmation_token = ? 
+                    AND user_confirmed = 0 
+                    AND cancelled = 0
+                ''', (token,))
+                
+                reservation = cursor.fetchone()
+                
+                if not reservation:
+                    logger.warning(f"Invalid token for POST: {token}")
+                    return '''
+                        <!DOCTYPE html>
+                        <html lang="es">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Error - Les Monges</title>
+                            <style>
+                                body { font-family: Georgia, serif; display: flex; justify-content: center; 
+                                       align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
+                                .container { text-align: center; padding: 40px; background: white; 
+                                            border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; }
+                                h1 { color: #dc3545; }
+                                p { color: #666; margin: 20px 0; }
+                                a { display: inline-block; margin-top: 20px; padding: 10px 20px; 
+                                   background: #28a428; color: white; text-decoration: none; border-radius: 5px; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                <h1>⚠️ Enlace inválido o expirado</h1>
+                                <p>Esta reserva ya fue confirmada o el enlace no es válido.</p>
+                                <a href="/">Volver al inicio</a>
+                            </div>
+                        </body>
+                        </html>
+                    '''
+                
+                # Determine confirmation flow based on group size
+                is_large = is_large_group(reservation['personas'])
+                
+                # Format date for display
+                fecha_display = format_date_spanish(reservation['fecha'])
+                
+                if is_large:
+                    # SMS for large group - mention they'll be contacted
+                    message = (
+                        f"Gracias por confirmar {reservation['nombre']}! "
+                        f"Tu solicitud para {reservation['personas']} personas está registrada. "
+                        f"Te contactaremos pronto para confirmar disponibilidad. "
+                        f"Puedes cancelar con este enlace si es necesario."
+                    )
+                    logger.info(f"Large group {reservation['id']} SMS-confirmed, awaiting restaurant approval")
+                else:
+                    # SMS for small group - confirmed! Mention cancellation link
+                    message = (
+                        f"¡Perfecto {reservation['nombre']}! "
+                        f"Reserva confirmada el {fecha_display} a las {reservation['hora']}. "
+                        f"Les esperamos! Puedes cancelar con este mismo enlace si es necesario."
+                    )
+                    logger.info(f"Small group {reservation['id']} fully confirmed")
+                
+                # Update database - mark user as confirmed
+                cursor.execute('''
+                    UPDATE reservations 
+                    SET user_confirmed = 1
+                    WHERE id = ?
+                ''', (reservation['id'],))
+                conn.commit()
+                
+                # Log action
+                log_action(reservation['id'], 'user_confirmed', 'customer', 'Via SMS link')
+                
+                # Send confirmation SMS
+                send_sms(reservation['telefono'], message)
+                
+                # Create cancellation link
+                cancel_link = f"{DOMAIN}/cancel/{reservation['confirmation_token']}"
+                
+                return f'''
+                    <!DOCTYPE html>
+                    <html lang="es">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Reserva Confirmada - {RESTAURANT_NAME}</title>
+                        <style>
+                            body {{ font-family: Georgia, serif; display: flex; justify-content: center;
+                                   align-items: center; min-height: 100vh; margin: 0;
+                                   background: linear-gradient(135deg, #faf8f3 0%, #fff 100%); }}
+                            .container {{ text-align: center; padding: 40px; background: white;
+                                        border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 500px; }}
+                            .checkmark {{ width: 80px; height: 80px; margin: 0 auto 20px; background: #32cd32;
+                                        border-radius: 50%; display: flex; align-items: center;
+                                        justify-content: center; font-size: 40px; color: white; }}
+                            h1 {{ color: #2a2523; margin: 20px 0; }}
+                            p {{ color: #666; line-height: 1.6; margin: 15px 0; }}
+                            .details {{ background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                            .detail-row {{ display: flex; justify-content: space-between; margin: 10px 0; }}
+                            .detail-label {{ font-weight: bold; color: #333; }}
+                            .detail-value {{ color: #666; }}
+                            a {{ display: inline-block; margin-top: 20px; padding: 12px 30px;
+                                background: transparent; color: #666; text-decoration: none;
+                                border: 2px solid #ddd; border-radius: 5px; transition: all 0.3s; }}
+                            a:hover {{ background: #32cd32; color: white; border-color: #32cd32; }}
+                            .cancel-btn {{ background: #dc3545; color: white; border-color: #dc3545; font-weight: bold; }}
+                            .cancel-btn:hover {{ background: #c82333; border-color: #c82333; }}
+                            .pending-approval {{ background: #fff3cd; border: 2px solid #ffc107;
+                                              padding: 15px; border-radius: 8px; margin: 20px 0; }}
+                            .actions {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="checkmark">✓</div>
+                            <h1>{'¡Reserva Confirmada!' if not is_large else '¡Solicitud Recibida!'}</h1>
+                            <p>{message}</p>
+                            {'<div class="pending-approval">⏳ Grupos grandes requieren confirmación del restaurante. Te contactaremos en breve.</div>' if is_large else ''}
+                            <div class="details">
+                                <div class="detail-row">
+                                    <span class="detail-label">Fecha:</span>
+                                    <span class="detail-value">{fecha_display}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Hora:</span>
+                                    <span class="detail-value">{reservation['hora']}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Personas:</span>
+                                    <span class="detail-value">{reservation['personas']}</span>
+                                </div>
+                            </div>
+                            <p><small>Te hemos enviado un SMS de confirmación</small></p>
+                            <div class="actions">
+                                <p><small>¿Necesitas cancelar?</small></p>
                                 <a href="{cancel_link}" class="cancel-btn">✕ Cancelar mi Reserva</a>
                             </div>
                             <a href="/">Volver al inicio</a>
