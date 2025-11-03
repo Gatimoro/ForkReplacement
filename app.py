@@ -44,7 +44,7 @@ MENSATEK_API_TOKEN = os.getenv('MENSATEK_API_TOKEN', '')
 
 # Business Logic
 LARGE_GROUP_THRESHOLD = int(os.getenv('LARGE_GROUP_THRESHOLD', '4'))
-DOMAIN = os.getenv('DOMAIN', 'http://localhost:5000')
+DOMAIN = os.getenv('DOMAIN', 'http://localhost:5000/')
 
 # Restaurant Info (for SMS messages)
 RESTAURANT_NAME = os.getenv('RESTAURANT_NAME', 'Les Monges')
