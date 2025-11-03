@@ -7,7 +7,7 @@ Handles reservations and SMS confirmations via MensaTek API v7
 import os
 import base64
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -415,6 +415,9 @@ def create_reservation():
             'message': 'Error procesando la reserva. Por favor, intenta de nuevo.'
         }), 500
 
+# ============================================================================
+# STATIC PAGE ROUTES
+# ============================================================================
 @app.route('/confirm/<token>', methods=['GET', 'POST'])
 def confirm_reservation(token):
     """Handle customer confirmation via SMS link"""
@@ -894,9 +897,317 @@ def cancel_reservation(token):
         return "Error procesando la cancelación", 500
 
 # ============================================================================
-# STATIC PAGE ROUTES
+# ADMIN API ENDPOINTS
 # ============================================================================
+@app.route('/api/admin/calendar')
+def admin_calendar():
+    """Get calendar data with reservation counts per day"""
+    try:
+        from datetime import timedelta
+        
+        month = int(request.args.get('month', now().month))
+        year = int(request.args.get('year', now().year))
+        
+        # Get first and last day of month
+        first_day = datetime(year, month, 1, tzinfo=TIMEZONE)
+        if month == 12:
+            last_day = datetime(year + 1, 1, 1, tzinfo=TIMEZONE)
+        else:
+            last_day = datetime(year, month + 1, 1, tzinfo=TIMEZONE)
+        
+        # Get day of week for first day (0 = Monday)
+        first_weekday = first_day.weekday()
+        
+        # Calculate days to show before first day
+        days_before = first_weekday
+        
+        # Calculate total days in month
+        days_in_month = (last_day - first_day).days
+        
+        # Calculate days to show after last day to complete grid
+        total_cells = days_before + days_in_month
+        days_after = (7 - (total_cells % 7)) % 7
+        
+        # Get reservation counts - separated by status
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Confirmed reservations (both user and restaurant confirmed)
+            cursor.execute('''
+                SELECT fecha, COUNT(*) as count
+                FROM reservations
+                WHERE cancelled = 0
+                AND user_confirmed = 1
+                AND restaurant_confirmed = 1
+                AND fecha >= date(?, '-' || ? || ' days')
+                AND fecha < date(?, '+' || ? || ' days')
+                GROUP BY fecha
+            ''', (first_day.strftime('%Y-%m-%d'), days_before, 
+                  last_day.strftime('%Y-%m-%d'), days_after))
+            
+            confirmed_counts = {row['fecha']: row['count'] for row in cursor.fetchall()}
+            
+            # Pending reservations (user confirmed but not restaurant)
+            cursor.execute('''
+                SELECT fecha, COUNT(*) as count
+                FROM reservations
+                WHERE cancelled = 0
+                AND user_confirmed = 1
+                AND restaurant_confirmed = 0
+                AND fecha >= date(?, '-' || ? || ' days')
+                AND fecha < date(?, '+' || ? || ' days')
+                GROUP BY fecha
+            ''', (first_day.strftime('%Y-%m-%d'), days_before, 
+                  last_day.strftime('%Y-%m-%d'), days_after))
+            
+            pending_counts = {row['fecha']: row['count'] for row in cursor.fetchall()}
+        
+        # Build calendar data
+        calendar_days = []
+        current = first_day - timedelta(days=days_before)
+        today = now().date()
+        
+        for i in range(days_before + days_in_month + days_after):
+            date_str = current.strftime('%Y-%m-%d')
+            calendar_days.append({
+                'date': date_str,
+                'day': current.day,
+                'confirmed_count': confirmed_counts.get(date_str, 0),
+                'pending_count': pending_counts.get(date_str, 0),
+                'otherMonth': current.month != month,
+                'isToday': current.date() == today
+            })
+            current += timedelta(days=1)
+        
+        return jsonify({
+            'success': True,
+            'month': month,
+            'year': year,
+            'days': calendar_days
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating calendar: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
+
+@app.route('/api/admin/reservations')
+def admin_reservations():
+    """Get reservations with filtering and sorting"""
+    try:
+        status = request.args.get('status', 'all')
+        sort = request.args.get('sort', 'fecha')
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+        fecha = request.args.get('fecha')  # Specific date filter
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Build query based on status
+            where_clauses = []
+            params = []
+            
+            if status == 'confirmed':
+                where_clauses.append('user_confirmed = 1')
+                where_clauses.append('restaurant_confirmed = 1')
+                where_clauses.append('cancelled = 0')
+            elif status == 'pending':
+                where_clauses.append('user_confirmed = 1')
+                where_clauses.append('restaurant_confirmed = 0')
+                where_clauses.append('cancelled = 0')
+            elif status == 'active':
+                where_clauses.append('cancelled = 0')
+            elif status == 'cancelled':
+                where_clauses.append('cancelled = 1')
+            
+            # Date filters
+            if fecha:
+                where_clauses.append('fecha = ?')
+                params.append(fecha)
+            else:
+                if date_from:
+                    where_clauses.append('fecha >= ?')
+                    params.append(date_from)
+                if date_to:
+                    where_clauses.append('fecha <= ?')
+                    params.append(date_to)
+            
+            where_sql = ' AND '.join(where_clauses) if where_clauses else '1=1'
+            
+            # Determine sort order
+            valid_sorts = ['fecha', 'created_at', 'cancelled_at', 'personas', 'hora']
+            if sort not in valid_sorts:
+                sort = 'fecha'
+            
+            query = f'''
+                SELECT * FROM reservations
+                WHERE {where_sql}
+                ORDER BY {sort} DESC, hora
+            '''
+            
+            cursor.execute(query, params)
+            reservations = [dict(row) for row in cursor.fetchall()]
+        
+        return jsonify({
+            'success': True,
+            'reservations': reservations
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching reservations: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/raw')
+def admin_raw():
+    """Get raw database dump"""
+    try:
+        limit = request.args.get('limit', '100')
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            if limit == 'all':
+                query = 'SELECT * FROM reservations ORDER BY id DESC'
+            else:
+                query = f'SELECT * FROM reservations ORDER BY id DESC LIMIT {int(limit)}'
+            
+            cursor.execute(query)
+            reservations = [dict(row) for row in cursor.fetchall()]
+        
+        return jsonify({
+            'success': True,
+            'reservations': reservations
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching raw data: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/cancel/<int:reservation_id>', methods=['POST'])
+def admin_cancel_reservation(reservation_id):
+    """Cancel a reservation from admin panel"""
+    try:
+        data = request.json
+        reason = data.get('reason', 'Cancelado desde panel admin')
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get reservation
+            cursor.execute('SELECT * FROM reservations WHERE id = ?', (reservation_id,))
+            reservation = cursor.fetchone()
+            
+            if not reservation:
+                return jsonify({'success': False, 'message': 'Reserva no encontrada'}), 404
+            
+            if reservation['cancelled']:
+                return jsonify({'success': False, 'message': 'Reserva ya cancelada'}), 400
+            
+            # Cancel it
+            cursor.execute('''
+                UPDATE reservations 
+                SET cancelled = 1,
+                    cancelled_at = CURRENT_TIMESTAMP,
+                    cancelled_by = ?
+                WHERE id = ?
+            ''', ('admin', reservation_id))
+            conn.commit()
+            
+            # Log action
+            log_action(reservation_id, 'cancelled', 'admin', reason)
+            
+            # Send SMS notification
+            fecha_display = format_date_spanish(reservation['fecha'])
+            message = (
+                f"Hola {reservation['nombre']}, "
+                f"lamentamos informarte que tu reserva para {reservation['personas']} personas "
+                f"el {fecha_display} a las {reservation['hora']} ha sido cancelada. "
+                f"Motivo: {reason}. "
+                f"Por favor, contactanos al {RESTAURANT_PHONE}. - {RESTAURANT_NAME}"
+            )
+            send_sms(reservation['telefono'], message)
+        
+        logger.info(f"Admin cancelled reservation {reservation_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Reserva cancelada exitosamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error cancelling reservation: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/approve/<int:reservation_id>', methods=['POST'])
+def admin_approve_reservation(reservation_id):
+    """Approve a pending reservation (large group)"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get reservation
+            cursor.execute('SELECT * FROM reservations WHERE id = ?', (reservation_id,))
+            reservation = cursor.fetchone()
+            
+            if not reservation:
+                return jsonify({'success': False, 'message': 'Reserva no encontrada'}), 404
+            
+            if reservation['cancelled']:
+                return jsonify({'success': False, 'message': 'Reserva cancelada'}), 400
+            
+            if reservation['restaurant_confirmed']:
+                return jsonify({'success': False, 'message': 'Reserva ya aprobada'}), 400
+            
+            # Approve it
+            cursor.execute('''
+                UPDATE reservations 
+                SET restaurant_confirmed = 1
+                WHERE id = ?
+            ''', (reservation_id,))
+            conn.commit()
+            
+            # Log action
+            log_action(reservation_id, 'restaurant_confirmed', 'admin', 'Aprobado desde panel admin')
+            
+            # Send SMS notification
+            fecha_display = format_date_spanish(reservation['fecha'])
+            message = (
+                f"Buenas noticias {reservation['nombre']}! "
+                f"Tu reserva para {reservation['personas']} personas el {fecha_display} "
+                f"a las {reservation['hora']} esta CONFIRMADA. Te esperamos! - {RESTAURANT_NAME}"
+            )
+            send_sms(reservation['telefono'], message)
+        
+        logger.info(f"Admin approved reservation {reservation_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Reserva aprobada exitosamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error approving reservation: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/admin')
+def admin_page():
+    """Serve the admin panel"""
+    try:
+        try:
+            with open('templates/admin.html', 'r', encoding='utf-8') as f:
+                return f.read()
+        except FileNotFoundError:
+            with open('admin.html', 'r', encoding='utf-8') as f:
+                return f.read()
+    except FileNotFoundError:
+        return "admin.html not found", 404
+
+#- ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - 
 @app.route('/')
 def home():
     """Serve the main reservation page"""
