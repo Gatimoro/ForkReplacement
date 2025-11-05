@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Admin Panel - Les Monges</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --sage-green: #8B9F6E;
+            --olive: #6B7A54;
+            --cream: #FAF8F3;
+            --paper: #F5F1E8;
+            --warm-brown: #5D4E47;
+            --light-brown: #8D7B6F;
+            --soft-white: #FFFBF5;
+            --accent-gold: #C9A86A;
+            --error-red: #dc3545;
+            --success-green: #32cd32;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: var(--paper);
+            color: var(--warm-brown);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            color: var(--sage-green);
+            font-weight: 400;
+        }
+
+        .refresh-btn {
+            padding: 10px 20px;
+            background: var(--sage-green);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--olive);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 5px;
+        }
+
+        .tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .tabs::-webkit-scrollbar-track {
+            background: var(--cream);
+        }
+
+        .tabs::-webkit-scrollbar-thumb {
+            background: var(--sage-green);
+            border-radius: 2px;
+        }
+
+        .tab {
+            padding: 12px 25px;
+            background: white;
+            border: 2px solid var(--sage-green);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: var(--sage-green);
+            color: white;
+        }
+
+        .tab:hover:not(.active) {
+            background: var(--cream);
+        }
+
+        .view-container {
+            display: none;
+        }
+
+        .view-container.active {
+            display: block;
+        }
+
+        /* Calendar Styles */
+        .calendar-container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-header h2 {
+            font-size: 1.4rem;
+            color: var(--warm-brown);
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .calendar-nav button {
+            padding: 8px 15px;
+            background: var(--sage-green);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+            color: var(--olive);
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 50px;
+            touch-action: manipulation;
+        }
+
+        .calendar-day:hover {
+            background: var(--cream);
+            border-color: var(--sage-green);
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-day.today {
+            border: 2px solid var(--success-green);
+            background: rgba(50, 205, 50, 0.1);
+        }
+
+        .calendar-day.selected {
+            background: var(--sage-green);
+            color: white;
+            border-color: var(--olive);
+        }
+
+        .calendar-day-number {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .calendar-day-count {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: var(--sage-green);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .calendar-day-badges {
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            display: flex;
+            gap: 3px;
+            flex-direction: row;
+        }
+
+        .calendar-day-badge {
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .calendar-day-badge.confirmed {
+            background: var(--success-green);
+        }
+
+        .calendar-day-badge.pending {
+            background: #ffc107;
+        }
+
+        /* Reservations List */
+        .reservations-container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-bar label {
+            font-weight: 500;
+            margin-right: 5px;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+        }
+
+        .date-header {
+            background: var(--sage-green);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            margin: 20px 0 10px 0;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .reservation-card {
+            background: var(--cream);
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .reservation-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .reservation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .reservation-id {
+            font-size: 0.9rem;
+            color: var(--light-brown);
+            font-weight: bold;
+        }
+
+        .reservation-status {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-badge.confirmed {
+            background: rgba(50, 205, 50, 0.2);
+            color: #2d8c2d;
+        }
+
+        .status-badge.pending {
+            background: rgba(255, 193, 7, 0.2);
+            color: #856404;
+        }
+
+        .status-badge.cancelled {
+            background: rgba(220, 53, 69, 0.2);
+            color: #721c24;
+        }
+
+        .reservation-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            color: var(--light-brown);
+            margin-bottom: 3px;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: var(--warm-brown);
+        }
+
+        .detail-value.phone {
+            color: var(--sage-green);
+        }
+
+        .reservation-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .action-btn.call {
+            background: var(--success-green);
+            color: white;
+        }
+
+        .action-btn.call:hover {
+            background: #28a428;
+        }
+
+        .action-btn.cancel {
+            background: var(--error-red);
+            color: white;
+        }
+
+        .action-btn.cancel:hover {
+            background: #c82333;
+        }
+
+        .action-btn.approve {
+            background: var(--sage-green);
+            color: white;
+        }
+
+        .action-btn.approve:hover {
+            background: var(--olive);
+        }
+
+        .action-btn.view-link {
+            background: var(--olive);
+            color: white;
+        }
+
+        .action-btn.view-link:hover {
+            background: var(--warm-brown);
+        }
+
+        /* Raw Database View */
+        .raw-container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: var(--sage-green);
+            color: white;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            background: var(--olive);
+        }
+
+        tr:hover {
+            background: var(--cream);
+        }
+
+        .sort-indicator {
+            margin-left: 5px;
+            opacity: 0.5;
+        }
+
+        th.sorted .sort-indicator {
+            opacity: 1;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+            color: var(--warm-brown);
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .modal-btn.confirm {
+            background: var(--error-red);
+            color: white;
+        }
+
+        .modal-btn.cancel-modal {
+            background: #6c757d;
+            color: white;
+        }
+
+        /* Hours modal specific styles */
+        .hours-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .hour-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .hour-item:hover {
+            border-color: var(--sage-green);
+        }
+
+        .hour-item.blocked {
+            background: rgba(220, 53, 69, 0.1);
+            border-color: var(--error-red);
+        }
+
+        .hour-item.available {
+            background: rgba(50, 205, 50, 0.1);
+            border-color: var(--success-green);
+        }
+
+        .hour-time {
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .hour-status {
+            font-size: 1.2rem;
+        }
+
+        .hour-count {
+            font-size: 0.75rem;
+            color: var(--light-brown);
+            margin-top: 3px;
+        }
+
+        .default-hour-slot {
+            padding: 15px 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+            font-weight: 500;
+        }
+
+        .default-hour-slot:hover {
+            border-color: var(--sage-green);
+            transform: translateY(-2px);
+        }
+
+        .default-hour-slot.active {
+            background: var(--success-green);
+            color: white;
+            border-color: var(--success-green);
+        }
+
+        .default-hour-slot.inactive {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--light-brown);
+            border-color: #ddd;
+        }
+
+        .day-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .day-action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .day-action-btn.block-all {
+            background: var(--error-red);
+            color: white;
+        }
+
+        .day-action-btn.unblock-all {
+            background: var(--success-green);
+            color: white;
+        }
+
+        .day-action-btn:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+
+        /* Loading Spinner */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--light-brown);
+        }
+
+        .spinner {
+            border: 4px solid var(--cream);
+            border-top: 4px solid var(--sage-green);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+	/* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--light-brown);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Compact View Styles */
+        .view-toggle {
+            display: flex;
+            gap: 5px;
+            background: var(--cream);
+            padding: 3px;
+            border-radius: 5px;
+            border: 1px solid var(--sage-green);
+        }
+
+        .view-toggle-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            color: var(--warm-brown);
+            transition: all 0.2s;
+        }
+
+        .view-toggle-btn.active {
+            background: var(--sage-green);
+            color: white;
+        }
+
+        .compact-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .compact-section-header {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--sage-green);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--sage-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .compact-reservation {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: var(--soft-white);
+            border-radius: 5px;
+            border-left: 3px solid var(--sage-green);
+            gap: 10px;
+        }
+
+        .compact-reservation.cancelled {
+            opacity: 0.6;
+            border-left-color: var(--error-red);
+            background: #f8f8f8;
+        }
+
+        .compact-reservation.pending {
+            border-left-color: #ffc107;
+        }
+
+        .compact-info {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            color: var(--warm-brown);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .compact-name {
+            font-weight: bold;
+            min-width: 120px;
+        }
+
+        .compact-time {
+            font-weight: bold;
+            color: var(--sage-green);
+            min-width: 50px;
+        }
+
+        .compact-people {
+            min-width: 80px;
+        }
+
+        .compact-phone {
+            color: var(--light-brown);
+            min-width: 100px;
+        }
+
+        .compact-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .compact-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .compact-btn.call {
+            background: #28a745;
+            color: white;
+        }
+
+        .compact-btn.approve {
+            background: var(--success-green);
+            color: white;
+        }
+
+        .compact-btn.cancel {
+            background: var(--error-red);
+            color: white;
+        }
+
+        .compact-btn.link {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .compact-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .compact-empty {
+            text-align: center;
+            padding: 30px;
+            color: var(--light-brown);
+            font-style: italic;
+        }
+
+        /* Responsive - ONLY ONE @media BLOCK */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.4rem;
+            }
+
+            .tabs {
+                gap: 5px;
+            }
+
+            .tab {
+                padding: 12px 18px;
+                font-size: 0.9rem;
+                flex: 1;
+                min-width: 0;
+                text-align: center;
+                min-height: 44px;
+            }
+
+            /* Compact view mobile styles - ADD THESE INSIDE THE SAME @media BLOCK */
+            .compact-info {
+                flex-direction: column;
+                gap: 5px;
+                align-items: flex-start;
+            }
+
+            .compact-name,
+            .compact-time,
+            .compact-people,
+            .compact-phone {
+                min-width: auto;
+            }
+
+            .compact-actions {
+                flex-wrap: wrap;
+            }
+
+            /* ... rest of your mobile styles continue here ... */
+
+            /* Calendar mobile improvements */
+            .calendar-container {
+                padding: 15px;
+            }
+
+            .calendar-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+
+            .calendar-header h2 {
+                font-size: 1.2rem;
+                text-align: center;
+            }
+
+            .calendar-nav {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+	.calendar-nav button {
+	    padding: 12px 18px;
+	    font-size: 0.9rem;
+	    min-width: 44px;
+	    min-height: 44px;
+	}
+            .calendar-grid {
+                gap: 3px;
+            }
+
+            .calendar-day-header {
+                font-size: 0.75rem;
+                padding: 5px 2px;
+            }
+
+            .calendar-day {
+                padding: 4px 2px;
+                font-size: 0.75rem;
+                min-height: 45px;
+            }
+
+            .calendar-day-number {
+                font-size: 0.85rem;
+            }
+
+            .calendar-day-count {
+                width: 18px;
+                height: 18px;
+                font-size: 0.7rem;
+                bottom: 2px;
+                right: 2px;
+            }
+
+            .calendar-day-badges {
+                bottom: 2px;
+                right: 2px;
+                gap: 2px;
+            }
+
+            .calendar-day-badge {
+                width: 18px;
+                height: 18px;
+                font-size: 0.65rem;
+            }
+
+            /* Reservations container mobile */
+            .reservations-container {
+                padding: 15px;
+            }
+
+            .reservations-container h2 {
+                font-size: 1.3rem;
+            }
+
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-bar label {
+                margin-top: 10px;
+            }
+
+            .filter-bar select,
+            .filter-bar input {
+                width: 100%;
+            }
+
+            .date-header {
+                font-size: 1rem;
+                padding: 10px 15px;
+            }
+
+            .reservation-card {
+                padding: 15px;
+            }
+
+            .reservation-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .reservation-id {
+                margin-bottom: 10px;
+            }
+
+            .reservation-details {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .reservation-actions {
+                flex-direction: column;
+            }
+
+	.action-btn {
+	    width: 100%;
+	    text-align: center;
+	    padding: 14px 20px;
+	    font-size: 0.95rem;
+	    margin: 5px 0;
+	}
+
+	.refresh-btn {
+	    padding: 14px 24px;
+	    font-size: 1rem;
+	    width: 100%;
+	    margin-top: 10px;
+	}
+            /* Raw table mobile */
+            .raw-container {
+                padding: 15px;
+            }
+
+            .raw-container h2 {
+                font-size: 1.3rem;
+            }
+
+            .table-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 8px 6px;
+                white-space: nowrap;
+            }
+
+            /* Modal mobile */
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            .modal-content h3 {
+                font-size: 1.2rem;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+            }
+
+	.modal-btn {
+	    width: 100%;
+	    padding: 14px 20px;
+	    font-size: 0.95rem;
+	    margin: 5px 0;
+	}
+            /* Status badges mobile */
+            .status-badge {
+                font-size: 0.75rem;
+                padding: 4px 10px;
+            }
+
+            /* Empty state mobile */
+            .empty-state {
+                padding: 40px 15px;
+            }
+
+            .empty-state-icon {
+                font-size: 2.5rem;
+            }
+        }
+
+        /* Extra small phones */
+        @media (max-width: 400px) {
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .tab {
+                font-size: 0.75rem;
+                padding: 8px 10px;
+            }
+
+            .calendar-day {
+                min-height: 40px;
+                font-size: 0.7rem;
+            }
+
+            .calendar-day-number {
+                font-size: 0.75rem;
+            }
+
+            .calendar-day-count {
+                width: 16px;
+                height: 16px;
+                font-size: 0.65rem;
+            }
+
+            .calendar-day-badges {
+                gap: 1px;
+            }
+
+            .calendar-day-badge {
+                width: 16px;
+                height: 16px;
+                font-size: 0.6rem;
+            }
+
+            .reservation-card {
+                padding: 12px;
+            }
+
+            .detail-label,
+            .detail-value {
+                font-size: 0.9rem;
+            }
+
+            .action-btn {
+                padding: 10px 14px;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Landscape orientation mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .calendar-day {
+                min-height: 35px;
+            }
+
+            .calendar-grid {
+                gap: 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Panel de Administración - Les Monges</h1>
+        <button class="refresh-btn" onclick="refreshCurrentView()">🔄 Actualizar</button>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('calendar')">📅 Calendario</div>
+        <div class="tab" onclick="switchTab('confirmed')">✅ Confirmadas</div>
+        <div class="tab" onclick="switchTab('pending')">⏳ Pendientes</div>
+        <div class="tab" onclick="switchTab('all')">📊 Todas</div>
+        <div class="tab" onclick="switchTab('hours')">⏰ Horarios</div>
+        <div class="tab" onclick="switchTab('raw')">🗄️ Base de Datos</div>
+    </div>
+
+    <!-- Calendar View -->
+    <div id="calendar-view" class="view-container active">
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <h2 id="calendar-title">Noviembre 2025</h2>
+                <div class="calendar-nav">
+                    <button onclick="previousMonth()">◀ Anterior</button>
+                    <button onclick="goToCurrentMonth()">Hoy</button>
+                    <button onclick="nextMonth()">Siguiente ▶</button>
+                </div>
+            </div>
+            <div class="calendar-grid" id="calendar-grid">
+                <!-- Calendar days will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Selected date reservations -->
+        <div id="calendar-reservations" style="margin-top: 20px;">
+            <!-- Reservations for selected date will appear here -->
+        </div>
+    </div>
+
+    <!-- Confirmed Reservations -->
+    <div id="confirmed-view" class="view-container">
+        <div class="reservations-container">
+            <h2 style="margin-bottom: 20px;">✅ Reservas Confirmadas</h2>
+            <div class="filter-bar">
+                <label>Ordenar por:</label>
+                <select id="confirmed-sort" onchange="loadConfirmedReservations()">
+                    <option value="fecha">Fecha de reserva</option>
+                    <option value="created_at">Fecha de creación</option>
+                </select>
+                <label>Desde:</label>
+                <input type="date" id="confirmed-date-from" onchange="loadConfirmedReservations()">
+                <label>Hasta:</label>
+                <input type="date" id="confirmed-date-to" onchange="loadConfirmedReservations()">
+            </div>
+            <div id="confirmed-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando reservas...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Reservations -->
+    <div id="pending-view" class="view-container">
+        <div class="reservations-container">
+            <h2 style="margin-bottom: 20px;">⏳ Pendientes de Aprobación</h2>
+            <div class="filter-bar">
+                <label>Ordenar por:</label>
+                <select id="pending-sort" onchange="loadPendingReservations()">
+                    <option value="created_at">Fecha de creación</option>
+                    <option value="fecha">Fecha de reserva</option>
+                </select>
+            </div>
+            <div id="pending-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando reservas...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Reservations -->
+    <div id="all-view" class="view-container">
+        <div class="reservations-container">
+            <h2 style="margin-bottom: 20px;">📊 Todas las Reservas</h2>
+            <div class="filter-bar">
+                <label>Estado:</label>
+                <select id="all-status" onchange="loadAllReservations()">
+                    <option value="all">Todas</option>
+                    <option value="active">Activas</option>
+                    <option value="cancelled">Canceladas</option>
+                </select>
+                <label>Ordenar por:</label>
+                <select id="all-sort" onchange="loadAllReservations()">
+                    <option value="fecha">Fecha de reserva</option>
+                    <option value="created_at">Fecha de creación</option>
+                    <option value="cancelled_at">Fecha de cancelación</option>
+                </select>
+                <label>Desde:</label>
+                <input type="date" id="all-date-from" onchange="loadAllReservations()">
+                <label>Hasta:</label>
+                <input type="date" id="all-date-to" onchange="loadAllReservations()">
+            </div>
+            <div id="all-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando reservas...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Default Hours Manager -->
+    <div id="hours-view" class="view-container">
+        <div class="reservations-container">
+            <h2 style="margin-bottom: 20px;">⏰ Horarios Predeterminados</h2>
+            <p style="color: var(--light-brown); margin-bottom: 25px;">
+                Selecciona los horarios que estarán disponibles por defecto cada día. 
+                Luego puedes bloquear horarios específicos desde el calendario.
+            </p>
+            
+            <div id="default-hours-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                <!-- Time slots 9:00 - 22:00 in 30 min increments -->
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="saveDefaultHours()" style="padding: 12px 30px; background: var(--sage-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-family: inherit; font-weight: 500;">
+                    💾 Guardar Cambios
+                </button>
+                <button onclick="loadDefaultHours()" style="padding: 12px 30px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-family: inherit;">
+                    🔄 Recargar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Database View -->
+    <div id="raw-view" class="view-container">
+        <div class="raw-container">
+            <h2 style="margin-bottom: 20px;">🗄️ Vista de Base de Datos</h2>
+            <div class="filter-bar">
+                <label>Límite:</label>
+                <select id="raw-limit" onchange="loadRawData()">
+                    <option value="50">50 registros</option>
+                    <option value="100" selected>100 registros</option>
+                    <option value="200">200 registros</option>
+                    <option value="all">Todos</option>
+                </select>
+            </div>
+            <div class="table-wrapper">
+                <table id="raw-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortRawTable('id', event)">ID <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('nombre', event)">Nombre <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('telefono', event)">Teléfono <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('personas', event)">Personas <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('fecha', event)">Fecha <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('hora', event)">Hora <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('user_confirmed', event)">Usuario OK <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('restaurant_confirmed', event)">Rest. OK <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('cancelled', event)">Cancelada <span class="sort-indicator">↕</span></th>
+                            <th onclick="sortRawTable('created_at', event)">Creada <span class="sort-indicator">↕</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="raw-tbody">
+                        <tr>
+                            <td colspan="10" style="text-align: center; padding: 40px;">
+                                <div class="spinner" style="margin: 0 auto 15px;"></div>
+                                Cargando datos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hours Management Modal -->
+    <div id="hours-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="hours-modal-title">⏰ Gestionar Horarios</h3>
+            <p id="hours-modal-date" style="color: var(--light-brown); margin-bottom: 20px;"></p>
+            
+            <div id="hours-list" class="hours-list">
+                <!-- Hours will be inserted here -->
+            </div>
+            
+            <div class="day-actions">
+                <button class="day-action-btn block-all" onclick="blockAllHours()">
+                    🔴 Bloquear Todo
+                </button>
+                <button class="day-action-btn unblock-all" onclick="unblockAllHours()">
+                    🟢 Abrir Todo
+                </button>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn cancel-modal" onclick="closeHoursModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Modal -->
+    <div id="cancel-modal" class="modal">
+        <div class="modal-content">
+            <h3>❌ Cancelar Reserva</h3>
+            <p style="margin-bottom: 15px; color: var(--light-brown);">
+                ¿Estás seguro de que quieres cancelar esta reserva?
+            </p>
+            <label for="cancel-reason" style="display: block; margin-bottom: 5px; font-weight: 500;">
+                Motivo (opcional):
+            </label>
+            <textarea id="cancel-reason" placeholder="Ej: Cliente canceló, mesa no disponible..."></textarea>
+            <div class="modal-actions">
+                <button class="modal-btn cancel-modal" onclick="closeCancelModal()">Volver</button>
+                <button class="modal-btn confirm" onclick="confirmCancel()">Cancelar Reserva</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentView = 'calendar';
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        let selectedDate = new Date().toISOString().split('T')[0];
+	let viewMode='card';
+        let cancellingReservationId = null;
+        let rawData = [];
+        let rawSortColumn = 'id';
+        let rawSortDirection = 'desc';
+
+        // API Base URL
+        const API_BASE = '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCalendar();
+            setDefaultDates();
+	    selectDate(selectedDate);
+        });
+
+        // Tab switching
+        function switchTab(view) {
+            currentView = view;
+            
+            // Update tab UI
+            document.querySelectorAll('.tab').forEach((tab, index) => {
+                tab.classList.remove('active');
+                // Map view to tab index
+                const viewMap = {
+                    'calendar': 0,
+                    'confirmed': 1,
+                    'pending': 2,
+                    'all': 3,
+                    'hours': 4,
+                    'raw': 5
+                };
+                if (viewMap[view] === index) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            // Update view UI
+            document.querySelectorAll('.view-container').forEach(container => {
+                container.classList.remove('active');
+            });
+            document.getElementById(`${view}-view`).classList.add('active');
+            
+            // Load data for the view
+            switch(view) {
+                case 'calendar':
+                    loadCalendar();
+                    break;
+                case 'confirmed':
+                    loadConfirmedReservations();
+                    break;
+                case 'pending':
+                    loadPendingReservations();
+                    break;
+                case 'all':
+                    loadAllReservations();
+                    break;
+                case 'hours':
+                    loadDefaultHours();
+                    break;
+                case 'raw':
+                    loadRawData();
+                    break;
+            }
+        }
+
+        // Refresh current view
+        function refreshCurrentView() {
+	    loadDefaultHours();
+            switchTab(currentView);
+        }
+
+        // Set default dates for filters
+        function setDefaultDates() {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            
+            // Set "from" to today
+            document.getElementById('confirmed-date-from').value = todayStr;
+            document.getElementById('all-date-from').value = todayStr;
+            
+            // Set "to" to 30 days from now
+            const future = new Date();
+            future.setDate(future.getDate() + 30);
+            const futureStr = future.toISOString().split('T')[0];
+            
+            document.getElementById('confirmed-date-to').value = futureStr;
+            document.getElementById('all-date-to').value = futureStr;
+        }
+
+        // Calendar functions
+        function loadCalendar() {
+            fetch(`${API_BASE}/api/admin/calendar?month=${currentMonth + 1}&year=${currentYear}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderCalendar(data);
+                    updateCalendarTitle();
+                })
+                .catch(error => {
+                    console.error('Error loading calendar:', error);
+                });
+        }
+
+        function renderCalendar(data) {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            // Add day headers
+            const dayHeaders = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+            dayHeaders.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-day-header';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+            
+            // Add days
+            data.days.forEach(day => {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day';
+                
+                if (day.otherMonth) {
+                    dayEl.classList.add('other-month');
+                }
+                if (day.isToday) {
+                    dayEl.classList.add('today');
+                }
+                if (day.date === selectedDate) {
+                    dayEl.classList.add('selected');
+                }
+                
+                // Build badges HTML
+                let badgesHtml = '';
+                if (day.confirmed_count > 0 || day.pending_count > 0) {
+                    badgesHtml = '<div class="calendar-day-badges">';
+                    if (day.confirmed_count > 0) {
+                        badgesHtml += `<div class="calendar-day-badge confirmed">${day.confirmed_count}</div>`;
+                    }
+                    if (day.pending_count > 0) {
+                        badgesHtml += `<div class="calendar-day-badge pending">${day.pending_count}</div>`;
+                    }
+                    badgesHtml += '</div>';
+                }
+                
+                dayEl.innerHTML = `
+                    <div class="calendar-day-number">${day.day}</div>
+                    ${badgesHtml}
+                `;
+                
+                dayEl.onclick = () => selectDate(day.date);
+                grid.appendChild(dayEl);
+            });
+        }
+
+        function updateCalendarTitle() {
+            const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            document.getElementById('calendar-title').textContent = `${months[currentMonth]} ${currentYear}`;
+        }
+
+        function previousMonth() {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            loadCalendar();
+        }
+
+        function nextMonth() {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            loadCalendar();
+        }
+
+	function goToCurrentMonth() {
+	    const today = new Date();
+	    currentMonth = today.getMonth();
+	    currentYear = today.getFullYear();
+	    selectedDate = today.toISOString().split('T')[0];
+	    loadCalendar();
+	    selectDate(selectedDate);
+	}
+
+        function selectDate(date) {
+            selectedDate = date;
+            loadCalendar(); // Re-render to show selection
+            
+            // Load reservations for this date
+            fetch(`${API_BASE}/api/admin/reservations?fecha=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderDateReservations(date, data.reservations);
+                })
+                .catch(error => {
+                    console.error('Error loading date reservations:', error);
+                });
+        }
+
+	function renderDateReservations(date, reservations) {
+	    const container = document.getElementById('calendar-reservations');
+	    
+	    const headerHtml = `
+		<div class="reservations-container">
+		    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+			<h3 style="margin: 0;">Reservas para ${formatDate(date)}</h3>
+			<div style="display: flex; gap: 10px; align-items: center;">
+			    <div class="view-toggle">
+				<button class="view-toggle-btn ${viewMode === 'card' ? 'active' : ''}" onclick="switchViewMode('card')">
+				    📋 Detalle
+				</button>
+				<button class="view-toggle-btn ${viewMode === 'compact' ? 'active' : ''}" onclick="switchViewMode('compact')">
+				    📖 Libro
+				</button>
+			    </div>
+			    <button onclick="openHoursModal('${date}')" style="padding: 8px 16px; background: var(--sage-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-family: inherit;">
+				⏰ Gestionar Horarios
+			    </button>
+			</div>
+		    </div>
+		    <div id="date-reservations-list"></div>
+		</div>
+	    `;
+	    
+	    if (!reservations || reservations.length === 0) {
+		container.innerHTML = `
+		    <div class="reservations-container">
+			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+			    <h3 style="margin: 0;">Reservas para ${formatDate(date)}</h3>
+			    <button onclick="openHoursModal('${date}')" style="padding: 8px 16px; background: var(--sage-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-family: inherit;">
+				⏰ Gestionar Horarios
+			    </button>
+			</div>
+			<div class="empty-state">
+			    <div class="empty-state-icon">📭</div>
+			    <p>No hay reservas para este día</p>
+			</div>
+		    </div>
+		`;
+		return;
+	    }
+	    
+	    container.innerHTML = headerHtml;
+	    
+	    const list = document.getElementById('date-reservations-list');
+	    
+	    if (viewMode === 'compact') {
+		renderCompactView(list, reservations);
+	    } else {
+		reservations.forEach(res => {
+		    list.appendChild(createReservationCard(res));
+		});
+	    }
+	}
+
+        // Load confirmed reservations
+        function loadConfirmedReservations() {
+            const sort = document.getElementById('confirmed-sort').value;
+            const dateFrom = document.getElementById('confirmed-date-from').value;
+            const dateTo = document.getElementById('confirmed-date-to').value;
+            
+            const params = new URLSearchParams({
+                status: 'confirmed',
+                sort: sort,
+                date_from: dateFrom,
+                date_to: dateTo
+            });
+            
+            fetch(`${API_BASE}/api/admin/reservations?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderReservationsList('confirmed-list', data.reservations);
+                })
+                .catch(error => {
+                    console.error('Error loading confirmed reservations:', error);
+                });
+        }
+
+        // Load pending reservations
+        function loadPendingReservations() {
+            const sort = document.getElementById('pending-sort').value;
+            
+            const params = new URLSearchParams({
+                status: 'pending',
+                sort: sort
+            });
+            
+            fetch(`${API_BASE}/api/admin/reservations?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderReservationsList('pending-list', data.reservations);
+                })
+                .catch(error => {
+                    console.error('Error loading pending reservations:', error);
+                });
+        }
+
+        // Load all reservations
+        function loadAllReservations() {
+            const status = document.getElementById('all-status').value;
+            const sort = document.getElementById('all-sort').value;
+            const dateFrom = document.getElementById('all-date-from').value;
+            const dateTo = document.getElementById('all-date-to').value;
+            
+            const params = new URLSearchParams({
+                status: status,
+                sort: sort,
+                date_from: dateFrom,
+                date_to: dateTo
+            });
+            
+            fetch(`${API_BASE}/api/admin/reservations?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderReservationsList('all-list', data.reservations);
+                })
+                .catch(error => {
+                    console.error('Error loading all reservations:', error);
+                });
+        }
+	function switchViewMode(mode) {
+	    viewMode = mode;
+	    // Re-render current date reservations
+	    if (selectedDate) {
+		fetch(`${API_BASE}/api/admin/reservations?fecha=${selectedDate}`)
+		    .then(response => response.json())
+		    .then(data => {
+			renderDateReservations(selectedDate, data.reservations);
+		    });
+	    }
+	}
+
+	function renderCompactView(container, reservations) {
+	    // Sort by time
+	    const sorted = reservations.filter(r => !r.cancelled).sort((a, b) => {
+		return a.hora.localeCompare(b.hora);
+	    });
+	    
+	    // Split into morning (until 19:00) and evening (19:00+)
+	    const morning = sorted.filter(r => r.hora < '19:00');
+	    const evening = sorted.filter(r => r.hora >= '19:00');
+	    
+	    // Render morning section
+	    const morningSection = document.createElement('div');
+	    morningSection.className = 'compact-section';
+	    morningSection.innerHTML = `
+		<div class="compact-section-header">━━━━━ Mañana ━━━━━</div>
+	    `;
+	    
+	    if (morning.length === 0) {
+		morningSection.innerHTML += '<div class="compact-empty">No hay reservas</div>';
+	    } else {
+		morning.forEach(res => {
+		    morningSection.appendChild(createCompactReservation(res));
+		});
+	    }
+	    
+	    // Render evening section
+	    const eveningSection = document.createElement('div');
+	    eveningSection.className = 'compact-section';
+	    eveningSection.innerHTML = `
+		<div class="compact-section-header">━━━━━ Tarde ━━━━━</div>
+	    `;
+	    
+	    if (evening.length === 0) {
+		eveningSection.innerHTML += '<div class="compact-empty">No hay reservas</div>';
+	    } else {
+		evening.forEach(res => {
+		    eveningSection.appendChild(createCompactReservation(res));
+		});
+	    }
+	    
+	    container.appendChild(morningSection);
+	    container.appendChild(eveningSection);
+	}
+
+	function createCompactReservation(res) {
+	    const div = document.createElement('div');
+	    let className = 'compact-reservation';
+	    if (res.cancelled) className += ' cancelled';
+	    else if (!res.restaurant_confirmed && res.user_confirmed) className += ' pending';
+	    
+	    div.className = className;
+	    
+	    const personas = res.personas === 1 ? '1 persona' : `${res.personas} personas`;
+	    
+	    let actions = '';
+	    if (!res.cancelled) {
+		actions = `
+		    <div class="compact-actions">
+			<button class="compact-btn call" onclick="callPhone('${res.telefono}')" title="Llamar">📞</button>
+			${!res.restaurant_confirmed && res.user_confirmed ? `
+			    <button class="compact-btn approve" onclick="approveReservation(${res.id})" title="Aprobar">✅</button>
+			` : ''}
+			<button class="compact-btn cancel" onclick="openCancelModal(${res.id})" title="Cancelar">❌</button>
+			<button class="compact-btn link" onclick="copyConfirmationLink('${res.confirmation_token}')" title="Copiar enlace">🔗</button>
+		    </div>
+		`;
+	    }
+	    
+	    div.innerHTML = `
+		<div class="compact-info">
+		    <span class="compact-name">${res.nombre}</span>
+		    <span class="compact-time">${res.hora}</span>
+		    <span class="compact-people">${personas}</span>
+		    <span class="compact-phone">${res.telefono}</span>
+		</div>
+		${actions}
+	    `;
+	    
+	    return div;
+	}
+
+        // Render reservations list with date headers
+        function renderReservationsList(containerId, reservations) {
+            const container = document.getElementById(containerId);
+            
+            if (!reservations || reservations.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>No hay reservas que mostrar</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            // Group by date
+            const byDate = {};
+            reservations.forEach(res => {
+                const date = res.fecha;
+                if (!byDate[date]) {
+                    byDate[date] = [];
+                }
+                byDate[date].push(res);
+            });
+            
+            // Render each date group
+            Object.keys(byDate).sort().forEach(date => {
+                const header = document.createElement('div');
+                header.className = 'date-header';
+                header.textContent = formatDate(date);
+                container.appendChild(header);
+                
+                byDate[date].forEach(res => {
+                    container.appendChild(createReservationCard(res));
+                });
+            });
+        }
+
+        // Create reservation card
+        function createReservationCard(res) {
+            const card = document.createElement('div');
+            card.className = 'reservation-card';
+            
+            const statusBadges = [];
+            if (res.cancelled) {
+                statusBadges.push('<span class="status-badge cancelled">❌ Cancelada</span>');
+            } else {
+                if (res.user_confirmed && res.restaurant_confirmed) {
+                    statusBadges.push('<span class="status-badge confirmed">✅ Confirmada</span>');
+                } else if (res.user_confirmed && !res.restaurant_confirmed) {
+                    statusBadges.push('<span class="status-badge pending">⏳ Pendiente aprobación</span>');
+                } else {
+                    statusBadges.push('<span class="status-badge pending">⏳ Esperando cliente</span>');
+                }
+            }
+            
+            let actions = '';
+            if (!res.cancelled) {
+                actions = `
+                    <div class="reservation-actions">
+                        <button class="action-btn call" onclick="callPhone('${res.telefono}')">
+                            📞 Llamar
+                        </button>
+                        ${!res.restaurant_confirmed && res.user_confirmed ? `
+                            <button class="action-btn approve" onclick="approveReservation(${res.id})">
+                                ✅ Aprobar
+                            </button>
+                        ` : ''}
+                        <button class="action-btn cancel" onclick="openCancelModal(${res.id})">
+                            ❌ Cancelar
+                        </button>
+                        <button class="action-btn view-link" onclick="copyConfirmationLink('${res.confirmation_token}')">
+                            🔗 Copiar enlace
+                        </button>
+                    </div>
+                `;
+            }
+            
+            card.innerHTML = `
+                <div class="reservation-header">
+                    <span class="reservation-id">ID: #${res.id}</span>
+                    <div class="reservation-status">
+                        ${statusBadges.join('')}
+                    </div>
+                </div>
+                <div class="reservation-details">
+                    <div class="detail-item">
+                        <span class="detail-label">👤 Nombre</span>
+                        <span class="detail-value">${res.nombre}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">📞 Teléfono</span>
+                        <span class="detail-value phone">${res.telefono}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">👥 Personas</span>
+                        <span class="detail-value">${res.personas}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">📅 Fecha</span>
+                        <span class="detail-value">${formatDate(res.fecha)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">🕐 Hora</span>
+                        <span class="detail-value">${res.hora}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">⏰ Creada</span>
+                        <span class="detail-value">${formatDateTime(res.created_at)}</span>
+                    </div>
+                    ${res.notes ? `
+                        <div class="detail-item" style="grid-column: 1 / -1;">
+                            <span class="detail-label">📝 Notas</span>
+                            <span class="detail-value">${res.notes}</span>
+                        </div>
+                    ` : ''}
+                    ${res.cancelled ? `
+                        <div class="detail-item" style="grid-column: 1 / -1;">
+                            <span class="detail-label">❌ Cancelada por</span>
+                            <span class="detail-value">${res.cancelled_by || 'Desconocido'} - ${formatDateTime(res.cancelled_at)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                ${actions}
+            `;
+            
+            return card;
+        }
+
+        // Load raw database data
+        function loadRawData() {
+            const limit = document.getElementById('raw-limit').value;
+            
+            fetch(`${API_BASE}/api/admin/raw?limit=${limit}`)
+                .then(response => response.json())
+                .then(data => {
+                    rawData = data.reservations;
+                    renderRawTable();
+                })
+                .catch(error => {
+                    console.error('Error loading raw data:', error);
+                });
+        }
+
+        function renderRawTable() {
+            const tbody = document.getElementById('raw-tbody');
+            
+            if (!rawData || rawData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px;">
+                            📭 No hay datos
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            rawData.forEach(res => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${res.id}</td>
+                    <td>${res.nombre}</td>
+                    <td>${res.telefono}</td>
+                    <td>${res.personas}</td>
+                    <td>${res.fecha}</td>
+                    <td>${res.hora}</td>
+                    <td>${res.user_confirmed ? '✅' : '❌'}</td>
+                    <td>${res.restaurant_confirmed ? '✅' : '❌'}</td>
+                    <td>${res.cancelled ? '✅' : '❌'}</td>
+                    <td>${formatDateTime(res.created_at)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function sortRawTable(column, event) {
+            if (rawSortColumn === column) {
+                rawSortDirection = rawSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                rawSortColumn = column;
+                rawSortDirection = 'asc';
+            }
+            
+            rawData.sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+                
+                if (aVal === null) aVal = '';
+                if (bVal === null) bVal = '';
+                
+                if (typeof aVal === 'string') {
+                    aVal = aVal.toLowerCase();
+                    bVal = bVal.toLowerCase();
+                }
+                
+                if (rawSortDirection === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
+            
+            // Update UI only if event is provided
+            if (event) {
+                document.querySelectorAll('#raw-table th').forEach(th => {
+                    th.classList.remove('sorted');
+                });
+                event.target.closest('th').classList.add('sorted');
+                
+                const indicator = event.target.closest('th').querySelector('.sort-indicator');
+                indicator.textContent = rawSortDirection === 'asc' ? '↑' : '↓';
+            }
+            
+            renderRawTable();
+        }
+
+        // Actions
+        function callPhone(phone) {
+            window.location.href = `tel:${phone}`;
+        }
+
+        function openCancelModal(id) {
+            cancellingReservationId = id;
+            document.getElementById('cancel-modal').classList.add('active');
+            document.getElementById('cancel-reason').value = '';
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancel-modal').classList.remove('active');
+            cancellingReservationId = null;
+        }
+
+        function confirmCancel() {
+            const reason = document.getElementById('cancel-reason').value;
+            
+            fetch(`${API_BASE}/api/admin/cancel/${cancellingReservationId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reason: reason || 'Sin motivo especificado' })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Error desconocido');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                closeCancelModal();
+                alert('✅ ' + (data.message || 'Reserva cancelada exitosamente'));
+                refreshCurrentView();
+            })
+            .catch(error => {
+                console.error('Error cancelling reservation:', error);
+                alert('❌ ' + error.message);
+            });
+        }
+
+        function approveReservation(id) {
+            if (!confirm('¿Aprobar esta reserva para grupo grande?')) {
+                return;
+            }
+            
+            fetch(`${API_BASE}/api/admin/approve/${id}`, {
+                method: 'POST'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Error desconocido');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert('✅ ' + (data.message || 'Reserva aprobada exitosamente'));
+                refreshCurrentView();
+            })
+            .catch(error => {
+                console.error('Error approving reservation:', error);
+                alert('❌ ' + error.message);
+            });
+        }
+
+        function copyConfirmationLink(token) {
+            const link = `${window.location.origin}/confirm/${token}`;
+            navigator.clipboard.writeText(link).then(() => {
+                alert('✅ Enlace copiado al portapapeles');
+            }).catch(err => {
+                alert('Error al copiar: ' + err);
+            });
+        }
+
+        // Hours management
+        let managingDate = null;
+        let hoursData = null;
+
+        function openHoursModal(date) {
+            managingDate = date;
+            document.getElementById('hours-modal').classList.add('active');
+            document.getElementById('hours-modal-date').textContent = formatDate(date);
+            
+            // Load hours data
+            fetch(`${API_BASE}/api/admin/blocked-hours/${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    hoursData = data;
+                    renderHoursList(data);
+                })
+                .catch(error => {
+                    console.error('Error loading hours:', error);
+                    alert('Error al cargar horarios');
+                });
+        }
+
+        function closeHoursModal() {
+            document.getElementById('hours-modal').classList.remove('active');
+            managingDate = null;
+            hoursData = null;
+            // Refresh calendar to show updated blocks
+            loadCalendar();
+        }
+
+        function renderHoursList(data) {
+            const list = document.getElementById('hours-list');
+            list.innerHTML = '';
+            
+            data.default_hours.forEach(hora => {
+                const isBlocked = data.blocked.includes(hora);
+                const reservationCount = data.reservation_counts[hora] || 0;
+                
+                const item = document.createElement('div');
+                item.className = `hour-item ${isBlocked ? 'blocked' : 'available'}`;
+                item.onclick = () => toggleHour(hora, isBlocked);
+                
+                item.innerHTML = `
+                    <div>
+                        <div class="hour-time">${hora}</div>
+                        ${reservationCount > 0 ? `<div class="hour-count">${reservationCount} reserva${reservationCount !== 1 ? 's' : ''}</div>` : ''}
+                    </div>
+                    <div class="hour-status">${isBlocked ? '🔴' : '🟢'}</div>
+                `;
+                
+                list.appendChild(item);
+            });
+        }
+
+        function toggleHour(hora, currentlyBlocked) {
+            if (currentlyBlocked) {
+                // Unblock
+                fetch(`${API_BASE}/api/admin/blocked-hours/${managingDate}/${hora}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload hours
+                        openHoursModal(managingDate);
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error unblocking hour:', error);
+                    alert('❌ Error al desbloquear hora');
+                });
+            } else {
+                // Block
+                fetch(`${API_BASE}/api/admin/blocked-hours/${managingDate}/${hora}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload hours
+                        openHoursModal(managingDate);
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error blocking hour:', error);
+                    alert('❌ Error al bloquear hora');
+                });
+            }
+        }
+
+        function blockAllHours() {
+            if (!confirm('¿Bloquear todas las horas de este día?')) {
+                return;
+            }
+            
+            fetch(`${API_BASE}/api/admin/blocked-hours/${managingDate}/block-all`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    openHoursModal(managingDate);
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error blocking all hours:', error);
+                alert('❌ Error al bloquear todo el día');
+            });
+        }
+
+        function unblockAllHours() {
+            if (!confirm('¿Abrir todas las horas de este día?')) {
+                return;
+            }
+            
+            fetch(`${API_BASE}/api/admin/blocked-hours/${managingDate}/unblock-all`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    openHoursModal(managingDate);
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error unblocking all hours:', error);
+                alert('❌ Error al abrir todo el día');
+            });
+        }
+
+	// Default hours management
+	let selectedDefaultHours = new Set();
+	let loadingDefaultHours = false;
+
+	function loadDefaultHours() {
+	    if (loadingDefaultHours) {
+		console.log('Already loading default hours, skipping duplicate call');
+		return;
+	    }
+	    
+	    loadingDefaultHours = true;
+	    fetch(`${API_BASE}/api/admin/default-hours`)
+		.then(response => response.json())
+		.then(data => {
+		    if (data.success) {
+			selectedDefaultHours = new Set(data.hours);
+			renderDefaultHoursGrid();
+		    }
+		})
+		.catch(error => {
+		    console.error('Error loading default hours:', error);
+		})
+		.finally(() => {
+		    loadingDefaultHours = false;
+		});
+	}
+        function renderDefaultHoursGrid() {
+            const grid = document.getElementById('default-hours-grid');
+            grid.innerHTML = '';
+            
+            // Generate all time slots from 9:00 to 22:00 in 30-min increments
+            for (let hour = 9; hour <= 22; hour++) {
+                for (let minute of [0, 30]) {
+                    if (hour === 22 && minute === 30) continue; // Stop at 22:00
+                    
+                    const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const isActive = selectedDefaultHours.has(time);
+                    
+                    const slot = document.createElement('div');
+                    slot.className = `default-hour-slot ${isActive ? 'active' : 'inactive'}`;
+                    slot.textContent = time;
+                    slot.onclick = () => toggleDefaultHour(time);
+                    
+                    grid.appendChild(slot);
+                }
+            }
+        }
+
+        function toggleDefaultHour(time) {
+            if (selectedDefaultHours.has(time)) {
+                selectedDefaultHours.delete(time);
+            } else {
+                selectedDefaultHours.add(time);
+            }
+            renderDefaultHoursGrid();
+        }
+
+        function saveDefaultHours() {
+            const hours = Array.from(selectedDefaultHours).sort();
+            
+            if (hours.length === 0) {
+                alert('❌ Debes seleccionar al menos un horario');
+                return;
+            }
+            
+            fetch(`${API_BASE}/api/admin/default-hours`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ hours: hours })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving default hours:', error);
+                alert('❌ Error al guardar horarios');
+            });
+        }
+
+        // Utility functions
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+        }
+
+        function formatDateTime(dateTimeStr) {
+            if (!dateTimeStr) return '-';
+            const date = new Date(dateTimeStr);
+            return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
