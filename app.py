@@ -484,6 +484,9 @@ def create_reservation():
 def admin_get_default_hours():
     """Get current default hours configuration"""
     try:
+        # Always read fresh from file
+        load_default_hours_from_file()
+        
         return jsonify({
             'success': True,
             'hours': DEFAULT_HOURS
@@ -1412,6 +1415,8 @@ def api_available_hours():
 def admin_get_blocked_hours(fecha):
     """Get blocked hours for a specific date"""
     try:
+        load_default_hours_from_file()
+
         blocked = get_blocked_hours_for_date(fecha)
         available = get_available_hours_for_date(fecha)
         
@@ -1580,5 +1585,5 @@ if __name__ == '__main__':
     app.run(
         host='0.0.0.0',
         port=5000,
-        debug=True
+        debug=False
     )
