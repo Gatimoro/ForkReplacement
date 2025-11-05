@@ -14,7 +14,7 @@ from flask_cors import CORS
 import sqlite3
 import requests
 from contextlib import contextmanager
-
+import json
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 # Timezone configuration
 TIMEZONE = ZoneInfo('Europe/Madrid')
-
+#HORAS por defecto, MUTADAS CON load_default_hours_from_file()
+DEFAULT_HOURS = ['13:00', '13:30', '14:00','14:30', '20:30', '21:00', '21:30','22:00']
 def now():
     """Get current time in Spanish timezone"""
     return datetime.now(TIMEZONE)
@@ -116,6 +117,20 @@ def init_database():
             FOREIGN KEY (reservation_id) REFERENCES reservations(id)
         )
     ''')
+
+    # Blocked hours table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS blocked_hours (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha DATE NOT NULL,
+            hora TIME NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(fecha, hora)
+        )
+    ''')
+    
+    # Create index for fast lookups
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_blocked_hours_fecha ON blocked_hours(fecha)')
     
     # Create indexes for performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_confirmation_token ON reservations(confirmation_token)')
@@ -181,11 +196,13 @@ def send_sms(phone, message):
         response = requests.post(url, data=data, headers=headers, timeout=10)
         
         if response.status_code == 200:
+            logger.info(f"MENSATEK RESPONSE: {response.text}")
             result = response.json()
             if isinstance(result, list):
                 result = result[0] if result else {}
             
             if result.get('Res') == 1:
+
                 logger.info(f"✅ SMS sent successfully to {phone}")
                 return True
             else:
@@ -198,7 +215,26 @@ def send_sms(phone, message):
     except Exception as e:
         logger.error(f"SMS exception: {str(e)}")
         return False
+def save_default_hours_to_file():
+    """Save DEFAULT_HOURS to a JSON file"""
+    try:
+        with open('default_hours.json', 'w') as f:
+            json.dump(DEFAULT_HOURS, f)
+        logger.info("Default hours saved to file")
+    except Exception as e:
+        logger.error(f"Error saving default hours to file: {str(e)}")
 
+def load_default_hours_from_file():
+    """Load DEFAULT_HOURS from JSON file if it exists"""
+    global DEFAULT_HOURS
+    try:
+        with open('default_hours.json', 'r') as f:
+            DEFAULT_HOURS = json.load(f)
+        logger.info(f"Default hours loaded from file: {DEFAULT_HOURS}")
+    except FileNotFoundError:
+        logger.info("No default_hours.json found, using hardcoded defaults")
+    except Exception as e:
+        logger.error(f"Error loading default hours from file: {str(e)}")
 def is_large_group(personas):
     """Check if reservation requires manual confirmation"""
     return int(personas) > LARGE_GROUP_THRESHOLD
@@ -232,7 +268,7 @@ def get_current_timeslot():
 
 def is_booking_allowed(fecha_str, hora_str):
     """
-    Check if booking is allowed based on opening times
+    Check if booking is allowed based on opening times and blocked hours
     Morning service: 12:00 PM
     Evening service: 19:00 (7 PM)
     
@@ -243,6 +279,10 @@ def is_booking_allowed(fecha_str, hora_str):
         hora = datetime.strptime(hora_str, '%H:%M').time()
         current = now()
         today = current.date()
+        
+        # Check if hour is blocked
+        if not is_hour_available(fecha_str, hora_str):
+            return False, "Esta hora no está disponible"
         
         # Determine if booking is for morning or evening
         booking_timeslot = 'morning' if hora.hour < 19 else 'evening'
@@ -265,12 +305,13 @@ def is_booking_allowed(fecha_str, hora_str):
             else:  # evening
                 return False, "Ya estamos sirviendo la cena. Puedes reservar a partir de mañana"
         
-        # Future dates always allowed
+        # Future dates always allowed (if not blocked)
         return True, ""
         
     except Exception as e:
         logger.error(f"Error validating booking time: {str(e)}")
         return False, f"Error al validar fecha/hora: {str(e)}"
+
 
 def log_action(reservation_id, action_type, performed_by, details=None):
     """Log action to database (for Discord bot to read)"""
@@ -281,6 +322,30 @@ def log_action(reservation_id, action_type, performed_by, details=None):
             VALUES (?, ?, ?, ?)
         ''', (reservation_id, action_type, performed_by, details))
         conn.commit()
+
+def get_blocked_hours_for_date(fecha_str):
+    """Get list of blocked hours for a specific date"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT hora FROM blocked_hours 
+            WHERE fecha = ?
+            ORDER BY hora
+        ''', (fecha_str,))
+        return [row['hora'] for row in cursor.fetchall()]
+
+
+def get_available_hours_for_date(fecha_str):
+    """Get list of available hours for a specific date"""
+    blocked = get_blocked_hours_for_date(fecha_str)
+    available = set(DEFAULT_HOURS) - set(blocked)
+    return sorted(list(available))
+
+
+def is_hour_available(fecha_str, hora_str):
+    """Check if a specific hour is available for booking"""
+    blocked = get_blocked_hours_for_date(fecha_str)
+    return hora_str not in blocked
 
 # ============================================================================
 # API ENDPOINTS
@@ -414,6 +479,63 @@ def create_reservation():
             'success': False,
             'message': 'Error procesando la reserva. Por favor, intenta de nuevo.'
         }), 500
+
+@app.route('/api/admin/default-hours', methods=['GET'])
+def admin_get_default_hours():
+    """Get current default hours configuration"""
+    try:
+        return jsonify({
+            'success': True,
+            'hours': DEFAULT_HOURS
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting default hours: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/default-hours', methods=['POST'])
+def admin_set_default_hours():
+    """Update default hours configuration"""
+    try:
+        data = request.json
+        new_hours = data.get('hours', [])
+        
+        if not new_hours or len(new_hours) == 0:
+            return jsonify({
+                'success': False, 
+                'message': 'Debes seleccionar al menos un horario'
+            }), 400
+        
+        # Validate hours format
+        for hora in new_hours:
+            try:
+                datetime.strptime(hora, '%H:%M')
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'message': f'Formato de hora inválido: {hora}'
+                }), 400
+        
+        # Update the global DEFAULT_HOURS variable
+        global DEFAULT_HOURS
+        DEFAULT_HOURS = sorted(new_hours)
+        
+        # Optionally: Save to a config file so it persists across restarts
+        # For now, it will reset on server restart (which is fine for your use case)
+
+        save_default_hours_to_file()
+        logger.info(f"Default hours updated to: {DEFAULT_HOURS}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Horarios actualizados: {len(DEFAULT_HOURS)} horarios configurados',
+            'hours': DEFAULT_HOURS
+        })
+        
+    except Exception as e:
+        logger.error(f"Error setting default hours: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # ============================================================================
 # STATIC PAGE ROUTES
@@ -1247,6 +1369,193 @@ def error_page():
     except FileNotFoundError:
         return "error.html not found", 404
 
+@app.route('/api/available-hours')
+def api_available_hours():
+    """Get available hours for a specific date (for frontend)"""
+    try:
+        fecha = request.args.get('fecha')
+        if not fecha:
+            return jsonify({'success': False, 'message': 'Fecha requerida'}), 400
+        
+        # Get available hours (not blocked)
+        available = get_available_hours_for_date(fecha)
+        
+        # Additional filtering for today
+        fecha_date = datetime.strptime(fecha, '%Y-%m-%d').date()
+        today = now().date()
+        
+        if fecha_date == today:
+            current_hour = now().hour
+            
+            # Before 7 PM (19:00), only show evening slots (>= 19:00)
+            if current_hour < 19:
+                available = [h for h in available if datetime.strptime(h, '%H:%M').time().hour >= 19]
+            else:
+                # After 7 PM, no bookings for today
+                available = []
+        elif fecha_date < today:
+            # No bookings for past dates
+            available = []
+        
+        return jsonify({
+            'success': True,
+            'hours': available,
+            'all_blocked': len(available) == 0
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting available hours: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/blocked-hours/<fecha>')
+def admin_get_blocked_hours(fecha):
+    """Get blocked hours for a specific date"""
+    try:
+        blocked = get_blocked_hours_for_date(fecha)
+        available = get_available_hours_for_date(fecha)
+        
+        # Get reservation counts per hour for this date
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT hora, COUNT(*) as count
+                FROM reservations
+                WHERE fecha = ? AND cancelled = 0
+                GROUP BY hora
+            ''', (fecha,))
+            reservation_counts = {row['hora']: row['count'] for row in cursor.fetchall()}
+        
+        return jsonify({
+            'success': True,
+            'fecha': fecha,
+            'default_hours': DEFAULT_HOURS,
+            'blocked': blocked,
+            'available': available,
+            'reservation_counts': reservation_counts
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting blocked hours: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/blocked-hours/<fecha>/<hora>', methods=['POST'])
+def admin_block_hour(fecha, hora):
+    """Block a specific hour on a specific date"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if already blocked
+            cursor.execute('''
+                SELECT id FROM blocked_hours 
+                WHERE fecha = ? AND hora = ?
+            ''', (fecha, hora))
+            
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Ya está bloqueada'}), 400
+            
+            # Block it
+            cursor.execute('''
+                INSERT INTO blocked_hours (fecha, hora)
+                VALUES (?, ?)
+            ''', (fecha, hora))
+            conn.commit()
+        
+        logger.info(f"Blocked {hora} on {fecha}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Hora {hora} bloqueada'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error blocking hour: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/blocked-hours/<fecha>/<hora>', methods=['DELETE'])
+def admin_unblock_hour(fecha, hora):
+    """Unblock a specific hour on a specific date"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                DELETE FROM blocked_hours 
+                WHERE fecha = ? AND hora = ?
+            ''', (fecha, hora))
+            
+            if cursor.rowcount == 0:
+                return jsonify({'success': False, 'message': 'No estaba bloqueada'}), 400
+            
+            conn.commit()
+        
+        logger.info(f"Unblocked {hora} on {fecha}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Hora {hora} desbloqueada'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error unblocking hour: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/blocked-hours/<fecha>/block-all', methods=['POST'])
+def admin_block_all_hours(fecha):
+    """Block all hours for a specific date"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Delete existing blocks for this date
+            cursor.execute('DELETE FROM blocked_hours WHERE fecha = ?', (fecha,))
+            
+            # Insert all default hours as blocked
+            for hora in DEFAULT_HOURS:
+                cursor.execute('''
+                    INSERT INTO blocked_hours (fecha, hora)
+                    VALUES (?, ?)
+                ''', (fecha, hora))
+            
+            conn.commit()
+        
+        logger.info(f"Blocked all hours on {fecha}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Todas las horas bloqueadas'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error blocking all hours: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/blocked-hours/<fecha>/unblock-all', methods=['POST'])
+def admin_unblock_all_hours(fecha):
+    """Unblock all hours for a specific date"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('DELETE FROM blocked_hours WHERE fecha = ?', (fecha,))
+            conn.commit()
+        
+        logger.info(f"Unblocked all hours on {fecha}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Todas las horas desbloqueadas'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error unblocking all hours: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 # ============================================================================
 # MAIN
 # ============================================================================
@@ -1254,7 +1563,8 @@ def error_page():
 if __name__ == '__main__':
     # Initialize database on startup
     init_database()
-    
+    #load hours
+    load_default_hours_from_file()
     # Log configuration
     logger.info("=" * 70)
     logger.info("Starting Restaurant Reservation System")
