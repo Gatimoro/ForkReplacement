@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atención Requerida - Les Monges</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+            color: #3a3330;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .error-container {
+            background: white;
+            padding: 60px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(220, 53, 69, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            animation: slideIn 0.5s ease-out;
+            border: 2px solid #ffebee;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-circle {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .error-circle svg {
+            width: 50px;
+            height: 50px;
+            fill: white;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #dc3545;
+            margin-bottom: 20px;
+            font-weight: 400;
+            letter-spacing: 1px;
+        }
+
+        .message {
+            font-size: 1.15rem;
+            color: #5a524b;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .phone-number {
+            font-size: 2rem;
+            color: #28a428;
+            font-weight: 500;
+            letter-spacing: 2px;
+            margin: 30px 0;
+            display: inline-block;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            padding: 15px 30px;
+            border: 2px solid #28a428;
+            border-radius: 50px;
+            background: rgba(40, 164, 40, 0.05);
+        }
+
+        .phone-number:hover {
+            transform: scale(1.05);
+            background: #28a428;
+            color: white;
+            box-shadow: 0 5px 20px rgba(40, 164, 40, 0.4);
+        }
+
+        .wave-decoration {
+            width: 60px;
+            height: 2px;
+            background-color: #dc3545;
+            margin: 30px auto;
+            position: relative;
+            opacity: 0.5;
+        }
+
+        .wave-decoration::before,
+        .wave-decoration::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background-color: #dc3545;
+            top: 0;
+        }
+
+        .wave-decoration::before {
+            left: -25px;
+        }
+
+        .wave-decoration::after {
+            right: -25px;
+        }
+
+        .btn-home {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            background-color: transparent;
+            color: #5a524b;
+            text-decoration: none;
+            border: 2px solid #d4cfc8;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            border-radius: 5px;
+        }
+
+        .btn-home:hover {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .special-note {
+            background: #fff9f9;
+            border-left: 4px solid #dc3545;
+            padding: 15px 20px;
+            margin: 30px 0;
+            text-align: left;
+            color: #721c24;
+            border-radius: 4px;
+        }
+
+        .warning-icon {
+            display: inline-block;
+            color: #dc3545;
+            font-size: 1.5rem;
+            margin-right: 10px;
+            vertical-align: middle;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .call-text {
+            color: #28a428;
+            font-weight: 500;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .error-container {
+                padding: 40px 20px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .phone-number {
+                font-size: 1.6rem;
+                padding: 12px 20px;
+            }
+
+            .message {
+                font-size: 1.05rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-circle">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+        </div>
+        
+        <h1>⚠️ ATENCIÓN REQUERIDA</h1>
+        
+        <div class="wave-decoration"></div>
+        
+        <p class="message" id="errorMessage">
+            {{ message }}
+        </p>
+        
+        <div class="special-note">
+            <span class="warning-icon">ℹ️</span>
+            Esta reserva requiere atención personalizada. Nuestro equipo te ayudará a organizar todo perfectamente.
+        </div>
+        
+        <p class="call-text">
+            ✅ Llámanos para confirmar tu reserva:
+        </p>
+        
+        <a href="tel:+34965785731" class="phone-number">📞 965 78 57 31</a>
+        
+        <p class="message">
+            <small>Horario de atención:<br>
+            Lunes a Domingo: 12:00 - 23:00<br>
+            </small>
+        </p>
+        
+        <div class="wave-decoration"></div>
+        
+        <a href="/" class="btn-home">← Volver al inicio</a>
+    </div>
+
+    <script>
+        // Get the message from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const message = urlParams.get('message');
+        
+        if (message) {
+            document.getElementById('errorMessage').textContent = decodeURIComponent(message);
+        } else {
+            document.getElementById('errorMessage').textContent = 'Tu reserva requiere atención especial. Por favor, llámanos para completarla.';
+        }
+    </script>
+</body>
+</html>
