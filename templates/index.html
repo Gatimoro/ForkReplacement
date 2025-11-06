@@ -4,26 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tasca Les Monges | Reserva tu Mesa - Cocina Mediterránea</title>
-    <!--
-    IMAGE REQUIREMENTS FOR /static/ FOLDER:
-    
-    ✅ HAVE:
-    - exquisit-color.png (200x200px) ✓
-    - monges-bicycle.png (400x396px) ✓
-    
-    STILL NEEDED:
-    - hero-paella.jpg (1920x1080px, beautiful paella close-up)
-    - dish-paella-marisco.jpg (800x600px, 4:3 ratio recommended)
-    - dish-gambones-ajillo.jpg (800x600px, 4:3 ratio recommended)
-    - dish-carpaccio.jpg (800x600px, 4:3 ratio recommended)
-    - dish-pulpo-gallega.jpg (800x600px, 4:3 ratio recommended)
-    - dish-entrecot-solomillo.jpg (800x600px, 4:3 ratio recommended)
-    - menu.pdf (full restaurant menu PDF)
-    
-    OPTIONAL (for future enhancements):
-    - restaurant-interior.jpg (any size, you have low-res - that's fine!)
-    - restaurant-exterior.jpg (any size, you have low-res - that's fine!)
-    -->
     <style>
         * {
             margin: 0;
@@ -144,7 +124,10 @@
                 transform: translateY(-20px) rotate(2deg);
             }
         }
-
+ 
+	@keyframes spin {
+	    to { transform: rotate(360deg); }
+	}
         /* Mobile-First Header */
         .header {
             position: fixed;
@@ -1413,7 +1396,7 @@
                 </div>
                 <div class="contact-item vintage-card">
                     <i>🕐</i>
-                    <span>Martes a Domingo<br>12:00 - 23:00<br><small style="opacity: 0.7;">(Lunes cerrado)</small></span>
+                    <span>Lunes a Domingo<br>12:00 - 23:00</span>
                 </div>
             </div>
             <div class="map-container">
@@ -1492,22 +1475,26 @@
                 <div class="form-group">
                     <label for="fecha">Fecha</label>
                     <input type="date" id="fecha" name="fecha" required>
+                    <small style="display: block; margin-top: 5px; color: var(--light-brown); opacity: 0.8;">Selecciona el día de tu visita</small>
                 </div>
 
-                <div class="form-group">
-                    <label>Hora preferida</label>
-                    <div class="time-grid">
-                        <div class="time-slot" data-time="13:00">13:00</div>
-                        <div class="time-slot selected" data-time="13:30">13:30</div>
-                        <div class="time-slot" data-time="14:00">14:00</div>
-                        <div class="time-slot" data-time="20:30">20:30</div>
-                        <div class="time-slot" data-time="21:00">21:00</div>
-                        <div class="time-slot" data-time="21:30">21:30</div>
-                    </div>
-                    <input type="hidden" id="hora" name="hora" value="13:30">
-                </div>
+		<div class="form-group">
+		    <label>Hora preferida</label>
+		    <div id="time-slots-loading" style="text-align: center; padding: 20px; display: none;">
+			<div style="display: inline-block; width: 20px; height: 20px; border: 2px solid var(--sage-green); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+			<p style="margin-top: 10px; color: var(--light-brown);">Cargando horarios...</p>
+		    </div>
+		    <div id="time-slots-unavailable" style="text-align: center; padding: 20px; display: none; background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px;">
+			<p style="color: #856404; margin: 0;">🚫 No hay horarios disponibles este día</p>
+			<p style="color: #856404; margin: 10px 0 0 0; font-size: 0.9rem;">Por favor, selecciona otra fecha</p>
+		    </div>
+		    <div class="time-grid" id="time-grid">
+			<!-- Time slots will be dynamically inserted here -->
+		    </div>
+		    <input type="hidden" id="hora" name="hora" value="">
+		</div>
 
-                <button type="submit" class="submit-btn" id="submitBtn">
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>
                     Confirmar Reserva Ahora
                 </button>
 
@@ -1524,7 +1511,7 @@
         <img src="/static/exquisit-color.png" alt="L'Exquisit Mediterrani" class="footer-logo-img">
         <p style="margin-top: 15px;">Calle Loreto 29, Dénia</p>
         <p><a href="tel:+34965785731">📞 965 78 57 31</a></p>
-        <p style="margin-top: 10px; font-style: italic; opacity: 0.8;">Mar-Dom: 12:00-23:00 · Lunes cerrado</p>
+        <p style="margin-top: 10px; font-style: italic; opacity: 0.8;">Lunes a Domingo: 12:00-23:00</p>
         <p style="margin-top: 20px; opacity: 0.7; font-size: 0.9rem;">© 2025 Tasca Les Monges</p>
         <p style="font-size: 0.85rem; opacity: 0.6; margin-top: 5px;">Hecho con ❤️ en Dénia</p>
     </footer>
@@ -1591,92 +1578,106 @@
             }
         });
 
-        // Time slot selector
-        const timeSlots = document.querySelectorAll('.time-slot');
-        const horaInput = document.getElementById('hora');
-        
-        timeSlots.forEach(slot => {
-            slot.addEventListener('click', () => {
-                // Only allow clicking visible slots
-                if (slot.style.display === 'none') return;
-                
-                timeSlots.forEach(s => s.classList.remove('selected'));
-                slot.classList.add('selected');
-                horaInput.value = slot.dataset.time;
-            });
-        });
+	// Time slot selector with dynamic loading
+	let availableHours = [];
+	const dateInput = document.getElementById('fecha');
+	const timeGrid = document.getElementById('time-grid');
+	const horaInput = document.getElementById('hora');
+	const timeLoading = document.getElementById('time-slots-loading');
+	const timeUnavailable = document.getElementById('time-slots-unavailable');
 
-        // Dynamic date and time slot management
-        const dateInput = document.getElementById('fecha');
+	// Load available hours when date changes
+	dateInput.addEventListener('change', loadAvailableHours);
+
+	function loadAvailableHours() {
+	    const fecha = dateInput.value;
+	    if (!fecha) return;
+	    
+	    // Show loading and disable submit
+	    const submitBtn = document.getElementById('submitBtn');
+	    submitBtn.disabled = true;
+	    timeLoading.style.display = 'block';
+	    timeUnavailable.style.display = 'none';
+	    timeGrid.style.display = 'none';
+	    timeGrid.innerHTML = '';
+	    horaInput.value = '';
+	    
+	    fetch(`/api/available-hours?fecha=${fecha}`)
+		.then(response => response.json())
+		.then(data => {
+		    timeLoading.style.display = 'none';
+		    
+		    if (data.success && data.hours.length > 0) {
+			availableHours = data.hours;
+			renderTimeSlots(data.hours);
+			timeGrid.style.display = 'grid';
+		    } else {
+			// No hours available - day is blocked
+			timeUnavailable.style.display = 'block';
+			submitBtn.disabled = true; // Keep button disabled
+		    }
+		})
+		.catch(error => {
+		    console.error('Error loading hours:', error);
+		    timeLoading.style.display = 'none';
+		    timeUnavailable.style.display = 'block';
+		    submitBtn.disabled = true; // Keep button disabled on error
+		});
+	}
+
+	function renderTimeSlots(hours) {
+	    timeGrid.innerHTML = '';
+	    const submitBtn = document.getElementById('submitBtn');
+	    
+	    hours.forEach((hora, index) => {
+		const slot = document.createElement('div');
+		slot.className = 'time-slot';
+		slot.dataset.time = hora;
+		slot.textContent = hora;
+		
+		// Auto-select first slot
+		if (index === 0) {
+		    slot.classList.add('selected');
+		    horaInput.value = hora;
+		    submitBtn.disabled = false; // Enable submit button
+		}
+		
+		slot.addEventListener('click', () => {
+		    document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+		    slot.classList.add('selected');
+		    horaInput.value = hora;
+		    submitBtn.disabled = false; // Enable submit button when time selected
+		});
+		
+		timeGrid.appendChild(slot);
+	    });
+	}
+
+        
+        // Set date minimum and default based on Spain time (7 PM cutoff)
         const now = new Date();
-        const currentHour = now.getHours();
         
-        // Function to update available time slots based on selected date
-        function updateAvailableTimeSlots() {
-            const selectedDate = new Date(dateInput.value + 'T00:00:00');
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            selectedDate.setHours(0, 0, 0, 0);
-            
-            const isToday = selectedDate.getTime() === today.getTime();
-            
-            timeSlots.forEach(slot => {
-                const slotTime = slot.dataset.time;
-                const slotHour = parseInt(slotTime.split(':')[0]);
-                
-                if (isToday) {
-                    // Today's logic based on current time
-                    if (currentHour < 12) {
-                        // Before noon - show all slots
-                        slot.style.display = '';
-                    } else if (currentHour >= 12 && currentHour < 19) {
-                        // Between noon and 7pm - only show evening slots (after 19:00)
-                        if (slotHour >= 19) {
-                            slot.style.display = '';
-                        } else {
-                            slot.style.display = 'none';
-                        }
-                    } else {
-                        // After 7pm - no slots available for today
-                        slot.style.display = 'none';
-                    }
-                } else {
-                    // Future dates - show all slots
-                    slot.style.display = '';
-                }
-            });
-            
-            // Auto-select first visible slot
-            const firstVisible = Array.from(timeSlots).find(slot => slot.style.display !== 'none');
-            if (firstVisible) {
-                timeSlots.forEach(s => s.classList.remove('selected'));
-                firstVisible.classList.add('selected');
-                horaInput.value = firstVisible.dataset.time;
-            }
+        // Get Spain time (CET/CEST - UTC+1 or UTC+2)
+        const spainTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+        const spainHour = spainTime.getHours();
+        
+        // Determine default date: today if before 19:00 (7 PM), otherwise tomorrow
+        const defaultDate = new Date(spainTime);
+        if (spainHour >= 19) {
+            defaultDate.setDate(defaultDate.getDate() + 1);
         }
         
-        // Set date options - allow today if before 7pm
-        const today = new Date();
+        // Set minimum to today (Spain time)
+        const today = new Date(spainTime);
         const todayStr = today.toISOString().split('T')[0];
+        dateInput.setAttribute('min', todayStr);
         
-        if (currentHour < 19) {
-            // Before 7pm - allow today
-            dateInput.setAttribute('min', todayStr);
-            dateInput.value = todayStr;
-        } else {
-            // After 7pm - minimum is tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowStr = tomorrow.toISOString().split('T')[0];
-            dateInput.setAttribute('min', tomorrowStr);
-            dateInput.value = tomorrowStr;
-        }
+        // Set default value
+        const defaultStr = defaultDate.toISOString().split('T')[0];
+        dateInput.value = defaultStr;
         
-        // Update slots when date changes
-        dateInput.addEventListener('change', updateAvailableTimeSlots);
-        
-        // Initial update
-        updateAvailableTimeSlots();
+        // Load hours for the default date
+        loadAvailableHours();
 
         // Subtle rotating messages
         const urgencyElements = document.querySelectorAll('.urgency-badge, .limited-spots');
@@ -1700,19 +1701,26 @@
             });
         }, 8000);
 
-        // Form submission
+	// Form submission
         document.getElementById('reservaForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
             const errorMessage = document.getElementById('errorMessage');
             
+            // Hide any previous error
+            errorMessage.classList.remove('show');
+            
+            // Validate hora is selected BEFORE disabling button
+            if (!horaInput.value) {
+                errorMessage.textContent = 'Por favor, selecciona una hora';
+                errorMessage.classList.add('show');
+                return;
+            }
+            
             // Disable submit button
             submitBtn.disabled = true;
             submitBtn.textContent = '⏳ Procesando...';
-            
-            // Hide any previous error
-            errorMessage.classList.remove('show');
             
             // Get the phone number
             let phoneNumber = document.getElementById('telefono').value.replace(/\s/g, '');
