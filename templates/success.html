@@ -102,19 +102,6 @@
             line-height: 1.6;
         }
 
-        .phone-icon {
-            display: inline-block;
-            animation: ring 2s ease-in-out infinite;
-            font-size: 1.5rem;
-            margin: 0 8px;
-        }
-
-        @keyframes ring {
-            0%, 100% { transform: rotate(0deg); }
-            10%, 30% { transform: rotate(-10deg); }
-            20%, 40% { transform: rotate(10deg); }
-        }
-
         .highlight {
             color: #32cd32;
             font-weight: 500;
@@ -156,6 +143,7 @@
             border: 2px solid #d4cfc8;
             transition: all 0.3s ease;
             font-size: 1rem;
+            border-radius: 5px;
         }
 
         .btn-home:hover {
@@ -175,6 +163,24 @@
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
+        }
+
+        .link-icon {
+            display: inline-block;
+            font-size: 1.3rem;
+            margin: 0 5px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% { 
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
         }
 
         @media (max-width: 600px) {
@@ -216,7 +222,7 @@
         
         <p class="message" id="instructionMessage">
             Te acabamos de enviar un SMS con un enlace.<br>
-            Haz clic en el enlace y confirma tu reserva ✨
+            Solo <span class="highlight">haz clic en el enlace</span> <span class="link-icon">🔗</span> y tu reserva estará confirmada ✨
         </p>
         
         <div class="wave-decoration"></div>
@@ -234,7 +240,7 @@
             // Update messages for large group
             document.getElementById('mainMessage').innerHTML = `¡Genial! Un grupo de <span class="highlight">${personas} personas</span> 🎉`;
             document.getElementById('actionMessage').innerHTML = '<strong>Confirma por SMS</strong>';
-            document.getElementById('instructionMessage').innerHTML = `Haz clic en el enlace del SMS que te enviamos.<br>Revisaremos disponibilidad y te confirmamos enseguida 😊`;
+            document.getElementById('instructionMessage').innerHTML = `Haz clic en el enlace <span class="link-icon">🔗</span> del SMS que te enviamos.<br>Revisaremos disponibilidad y te confirmamos enseguida 😊`;
         }
     </script>
 </body>
