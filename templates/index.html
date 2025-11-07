@@ -4,6 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tasca Les Monges | Reserva tu Mesa - Cocina Mediterránea</title>
+    <!--
+    IMAGE REQUIREMENTS FOR /static/ FOLDER:
+    
+    ✅ HAVE:
+    - exquisit-color.png (200x200px) ✓
+    - monges-bicycle.png (400x396px) ✓
+    
+    STILL NEEDED:
+    - hero-paella.jpg (1920x1080px, beautiful paella close-up)
+    - dish-paella-marisco.jpg (800x600px, 4:3 ratio recommended)
+    - dish-gambones-ajillo.jpg (800x600px, 4:3 ratio recommended)
+    - dish-carpaccio.jpg (800x600px, 4:3 ratio recommended)
+    - dish-pulpo-gallega.jpg (800x600px, 4:3 ratio recommended)
+    - dish-entrecot-solomillo.jpg (800x600px, 4:3 ratio recommended)
+    - menu.pdf (full restaurant menu PDF)
+    
+    OPTIONAL (for future enhancements):
+    - restaurant-interior.jpg (any size, you have low-res - that's fine!)
+    - restaurant-exterior.jpg (any size, you have low-res - that's fine!)
+    -->
     <style>
         * {
             margin: 0;
@@ -1062,7 +1082,8 @@
             height: auto;
             margin: 0 auto 15px;
             opacity: 0.6;
-            filter: grayscale(100%) brightness(2);
+            /*filter: grayscale(100%) brightness(2);*/
+filter: brightness(0) invert(1);
         }
 
         .footer a {
@@ -1235,8 +1256,8 @@
 </head>
 <body>
     <!-- Decorative floating elements inspired by menu -->
-    <img src="/static/monges-bicycle-medium.png" alt="" class="menu-decoration bicycle-float-1" aria-hidden="true">
-    <img src="/static/monges-bicycle-medium.png" alt="" class="menu-decoration bicycle-float-2" aria-hidden="true">
+    <img src="/static/monges-bicycle.png" alt="" class="menu-decoration bicycle-float-1" aria-hidden="true">
+    <img src="/static/monges-bicycle.png" alt="" class="menu-decoration bicycle-float-2" aria-hidden="true">
 
     <!-- Header -->
     <header class="header">
