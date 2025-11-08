@@ -375,6 +375,7 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+	    justify-content: flex-end;
         }
 
         .action-btn {
@@ -1943,7 +1944,7 @@
             let actions = '';
             if (!res.cancelled) {
 		actions = `
-		    <div class="reservation-actions" style="justify-content: flex-end;>
+		    <div class="reservation-actions">
 			<button class="action-btn cancel" onclick="openCancelModal(${res.id})">
 			    ❌ Cancelar
 			</button>
