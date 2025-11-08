@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Restaurant Reservation System - Backend API
-Handles reservations and SMS confirmations via MensaTek API v7
+Handles reservations and MS confirmations via MensaTek API v7
 """
 
 import os
@@ -15,6 +15,8 @@ import sqlite3
 import requests
 from contextlib import contextmanager
 import json
+from dotenv import load_dotenv  # ADD THIS
+load_dotenv()
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -417,8 +419,8 @@ def create_reservation():
                 INSERT INTO reservations 
                 (nombre, telefono, personas, fecha, hora, 
                  user_confirmed, restaurant_confirmed, 
-                 confirmation_token)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 confirmation_token, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['nombre'],
                 clean_phone,
@@ -427,7 +429,9 @@ def create_reservation():
                 data['hora'],
                 0,  # user_confirmed = False (MUST click SMS link first)
                 0 if is_large else 1,  # restaurant_confirmed based on group size
-                confirmation_token
+                confirmation_token,
+                data.get('comentarios','')
+
             ))
             conn.commit()
             reservation_id = cursor.lastrowid
@@ -539,6 +543,51 @@ def admin_set_default_hours():
     except Exception as e:
         logger.error(f"Error setting default hours: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/contacto', methods=['POST'])
+def contact_form():
+    """Handle contact form submission"""
+    try:
+        data = request.json
+        logger.info(f"Received contact form: {data}")
+        
+        # Validate required fields
+        if not data.get('nombre') or not data.get('email') or not data.get('mensaje'):
+            return jsonify({
+                'success': False,
+                'message': 'Por favor completa todos los campos obligatorios'
+            }), 400
+        
+        # Here you can add email sending logic
+        # For now, just log it
+        contact_message = f"""
+        Nueva consulta desde el formulario de contacto:
+        
+        Nombre: {data['nombre']}
+        Email: {data['email']}
+        Teléfono: {data.get('telefono', 'No proporcionado')}
+        
+        Mensaje:
+        {data['mensaje']}
+        """
+        
+        logger.info(f"📧 Contact form submission:\n{contact_message}")
+        
+        # TODO: Add email sending here using your preferred service
+        # For example, you could use the same MensaTek API if they have email
+        # or integrate with SendGrid, Mailgun, etc.
+        
+        return jsonify({
+            'success': True,
+            'message': '¡Gracias por tu mensaje! Te responderemos pronto.'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing contact form: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Error procesando el mensaje. Por favor, intenta de nuevo.'
+        }), 500
 
 # ============================================================================
 # STATIC PAGE ROUTES
@@ -1333,19 +1382,17 @@ def admin_page():
         return "admin.html not found", 404
 
 #- ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - 
-@app.route('/')
+@app.route('/tasca-les-monges')
 def home():
     """Serve the main reservation page"""
     try:
-        try:
-            with open('templates/index.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            with open('index.html', 'r', encoding='utf-8') as f:
-                return f.read()
+        with open('templates/index.html', 'r', encoding='utf-8') as f:
+            return f.read()
     except FileNotFoundError:
         return "index.html not found", 404
-
+@app.route('/')
+def index():
+    return home()
 @app.route('/success')
 def success_page():
     """Serve the success page"""
