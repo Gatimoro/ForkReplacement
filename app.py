@@ -544,6 +544,15 @@ def admin_set_default_hours():
         logger.error(f"Error setting default hours: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/test-contact')
+def test_contact():
+    try:
+        with open('./test_contact.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "test_contact.html not found", 404
+
+
 @app.route('/contacto', methods=['POST'])
 def contact_form():
     """Handle contact form submission"""
