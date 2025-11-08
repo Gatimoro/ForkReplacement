@@ -1492,6 +1492,12 @@ filter: brightness(0) invert(1);
 		    </div>
 		    <input type="hidden" id="hora" name="hora" value="">
 		</div>
+<div class="form-group">
+                    <label for="comentarios">Comentarios o peticiones especiales (opcional)</label>
+                    <textarea id="comentarios" name="comentarios" rows="3" 
+                              style="width: 100%; padding: 12px; border: 2px solid var(--sage-green); border-radius: 8px; font-family: inherit; resize: vertical; background: var(--soft-white);" 
+                              placeholder="Ej: Alergia a frutos secos, mesa cerca de la ventana, celebración especial..."></textarea>
+                </div>
 
                 <button type="submit" class="submit-btn" id="submitBtn" disabled>
                     Confirmar Reserva Ahora
@@ -1503,6 +1509,90 @@ filter: brightness(0) invert(1);
             </form>
         </div>
     </section>
+	<!-- Contact Form -->
+    <section class="contact-form-section" style="padding: 60px 20px; background: var(--cream);">
+        <div class="container" style="max-width: 600px; margin: 0 auto;">
+            <h2 style="text-align: center; color: var(--warm-brown); margin-bottom: 10px;">¿Tienes alguna pregunta?</h2>
+            <p class="handwritten-accent" style="text-align: center; margin-bottom: 30px;">Escríbenos y te responderemos pronto</p>
+            
+            <form id="contactForm" class="vintage-card" style="padding: 30px;">
+                <div class="error-message" id="contactErrorMessage" style="display: none;"></div>
+                <div class="success-message" id="contactSuccessMessage" style="display: none; padding: 15px; background: #d4edda; border: 2px solid #c3e6cb; border-radius: 8px; color: #155724; margin-bottom: 20px;"></div>
+                
+                <div class="form-group">
+                    <label for="contact-name">Tu nombre</label>
+                    <input type="text" id="contact-name" required placeholder="Ej: Bob Smith">
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact-email">Email</label>
+                    <input type="email" id="contact-email" required placeholder="tu@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact-phone">Teléfono (opcional)</label>
+                    <input type="tel" id="contact-phone" placeholder="+34 600 000 000">
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact-message">Mensaje</label>
+                    <textarea id="contact-message" rows="5" required 
+                              style="width: 100%; padding: 12px; border: 2px solid var(--sage-green); border-radius: 8px; font-family: inherit; resize: vertical; background: var(--soft-white);"
+                              placeholder="Escribe tu consulta aquí..."></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn" style="width: 100%;">
+                    Enviar mensaje
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <script>
+        // Contact form submission
+        document.getElementById('contactForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const errorDiv = document.getElementById('contactErrorMessage');
+            const successDiv = document.getElementById('contactSuccessMessage');
+            const submitBtn = this.querySelector('button[type="submit"]');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando...';
+            
+            try {
+                const response = await fetch('/contacto', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre: document.getElementById('contact-name').value.trim(),
+                        email: document.getElementById('contact-email').value.trim(),
+                        telefono: document.getElementById('contact-phone').value.trim(),
+                        mensaje: document.getElementById('contact-message').value.trim()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    successDiv.textContent = '✅ ' + data.message;
+                    successDiv.style.display = 'block';
+                    this.reset();
+                } else {
+                    errorDiv.textContent = data.message;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error al enviar el mensaje. Por favor, intenta de nuevo.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Enviar mensaje';
+            }
+        });
+    </script>
 
     <!-- Footer -->
     <footer class="footer">
@@ -1713,8 +1803,9 @@ filter: brightness(0) invert(1);
                 telefono: phoneNumber,
                 personas: document.getElementById('personas').value,
                 fecha: document.getElementById('fecha').value,
-                hora: document.getElementById('hora').value
-            };
+                hora: document.getElementById('hora').value,
+		comentarios: document.getElementById('comentarios').value.trim()
+	    };
             
             console.log('Sending data:', formData);
             
