@@ -270,19 +270,6 @@
             opacity: 0.95;
         }
 
-        /* Availability badge - more inviting */
-        .urgency-badge {
-            background: rgba(139, 159, 110, 0.9);
-            color: var(--soft-white);
-            padding: 10px 24px;
-            border-radius: 25px;
-            font-size: 0.95rem;
-            display: inline-block;
-            margin-bottom: 20px;
-            font-weight: 500;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-        }
 
         /* CTA Button in Hero - Elegant and subtle */
         .hero-cta {
@@ -691,17 +678,6 @@
             font-weight: 300;
         }
 
-        .limited-spots {
-            background: var(--sage-green);
-            color: white;
-            padding: 10px 22px;
-            border-radius: 25px;
-            font-size: 1rem;
-            display: inline-block;
-            margin-bottom: 15px;
-            font-weight: 500;
-            border: 2px solid var(--olive);
-        }
 
         .form-header p {
             color: var(--light-brown);
@@ -1419,7 +1395,7 @@ filter: brightness(0) invert(1);
                 </div>
                 <div class="contact-item vintage-card">
                     <i>🕐</i>
-                    <span>Lunes a Domingo<br>13:00 - 23:00</span>
+			<span>Lunes a Domingo:<br>13:00 - 23:00</span>
                 </div>
             </div>
             <div class="map-container">
@@ -1702,27 +1678,6 @@ filter: brightness(0) invert(1);
         // Load hours for the default date
         loadAvailableHours();
 
-        // Subtle rotating messages
-        const urgencyElements = document.querySelectorAll('.urgency-badge, .limited-spots');
-        const messages = [
-            '🍽️ Reserva fácil y rápida',
-            '✨ Reserva en 2 minutos',
-            '📅 Confirmación inmediata',
-            '👨‍🍳 Cocina tradicional'
-        ];
-        
-        let messageIndex = 0;
-        setInterval(() => {
-            messageIndex = (messageIndex + 1) % messages.length;
-            urgencyElements.forEach(el => {
-                el.style.transition = 'opacity 0.5s ease';
-                el.style.opacity = '0';
-                setTimeout(() => {
-                    el.textContent = messages[messageIndex];
-                    el.style.opacity = '1';
-                }, 500);
-            });
-        }, 8000);
 
 	// Form submission
         document.getElementById('reservaForm').addEventListener('submit', async function(e) {
