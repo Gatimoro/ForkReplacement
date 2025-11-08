@@ -388,12 +388,12 @@
         }
 
         .action-btn.call {
-            background: var(--success-green);
+            background: var(--sage-green);
             color: white;
         }
 
         .action-btn.call:hover {
-            background: #28a428;
+            background: var(--olive);
         }
 
         .action-btn.cancel {
@@ -406,12 +406,12 @@
         }
 
         .action-btn.approve {
-            background: var(--sage-green);
+            background: var(--success-green);
             color: white;
         }
 
         .action-btn.approve:hover {
-            background: var(--olive);
+            background: #28a428;
         }
 
         .action-btn.view-link {
@@ -754,6 +754,15 @@
             border-left-color: #ffc107;
         }
 
+	.compact-reservation.confirmed {
+	    border-left-color: var(--success-green);
+	    background: rgba(50, 205, 50, 0.05);
+	}
+
+	.compact-reservation.client-pending {
+	    border-left-color: #17a2b8;
+	    background: rgba(23, 162, 184, 0.05);
+	}
         .compact-info {
             flex: 1;
             font-family: 'Courier New', monospace;
@@ -1189,6 +1198,14 @@
                 <label>Hasta:</label>
                 <input type="date" id="confirmed-date-to" onchange="loadConfirmedReservations()">
             </div>
+		<div class="view-toggle" style="display: inline-flex; margin-bottom: 20px;">
+		    <button class="view-toggle-btn active" onclick="switchListViewMode('confirmed', 'card')">
+			📋 Detalle
+		    </button>
+		    <button class="view-toggle-btn" onclick="switchListViewMode('confirmed', 'compact')">
+			📖 Libro
+		    </button>
+		</div>
             <div id="confirmed-list">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -1209,6 +1226,14 @@
                     <option value="fecha">Fecha de reserva</option>
                 </select>
             </div>
+		<div class="view-toggle" style="display: inline-flex; margin-bottom: 20px;">
+		    <button class="view-toggle-btn active" onclick="switchListViewMode('pending', 'card')">
+			📋 Detalle
+		    </button>
+		    <button class="view-toggle-btn" onclick="switchListViewMode('pending', 'compact')">
+			📖 Libro
+		    </button>
+		</div>
             <div id="pending-list">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -1222,23 +1247,31 @@
     <div id="all-view" class="view-container">
         <div class="reservations-container">
             <h2 style="margin-bottom: 20px;">📊 Todas las Reservas</h2>
-            <div class="filter-bar">
-                <label>Estado:</label>
-                <select id="all-status" onchange="loadAllReservations()">
-                    <option value="all">Todas</option>
-                    <option value="active">Activas</option>
-                    <option value="cancelled">Canceladas</option>
-                </select>
-                <label>Ordenar por:</label>
-                <select id="all-sort" onchange="loadAllReservations()">
-                    <option value="fecha">Fecha de reserva</option>
-                    <option value="created_at">Fecha de creación</option>
-                    <option value="cancelled_at">Fecha de cancelación</option>
-                </select>
-                <label>Desde:</label>
-                <input type="date" id="all-date-from" onchange="loadAllReservations()">
-                <label>Hasta:</label>
-                <input type="date" id="all-date-to" onchange="loadAllReservations()">
+		<div class="filter-bar">
+			<label>Estado:</label>
+			<select id="all-status" onchange="loadAllReservations()">
+			    <option value="all">Todas</option>
+			    <option value="active">Activas</option>
+			    <option value="cancelled">Canceladas</option>
+			</select>
+			<label>Ordenar por:</label>
+			<select id="all-sort" onchange="loadAllReservations()">
+			    <option value="fecha">Fecha de reserva</option>
+			    <option value="created_at">Fecha de creación</option>
+			    <option value="cancelled_at">Fecha de cancelación</option>
+			</select>
+			<label>Desde:</label>
+			<input type="date" id="all-date-from" onchange="loadAllReservations()">
+			<label>Hasta:</label>
+			<input type="date" id="all-date-to" onchange="loadAllReservations()">
+		    </div>
+		<div class="view-toggle" style="display: inline-flex; margin-bottom: 20px;">
+                <button class="view-toggle-btn active" onclick="switchListViewMode('all', 'card')">
+                    📋 Detalle
+                </button>
+                <button class="view-toggle-btn" onclick="switchListViewMode('all', 'compact')">
+                    📖 Libro
+                </button>
             </div>
             <div id="all-list">
                 <div class="loading">
@@ -1369,7 +1402,9 @@
         let rawData = [];
         let rawSortColumn = 'id';
         let rawSortDirection = 'desc';
-
+	let confirmedViewMode = 'card';
+	let pendingViewMode = 'card';
+	let allViewMode = 'card';
         // API Base URL
         const API_BASE = '';
 
@@ -1379,6 +1414,29 @@
             setDefaultDates();
 	    selectDate(selectedDate);
         });
+
+	//toggle list view mode.
+	function switchListViewMode(view, mode) {
+	    if (view === 'confirmed') confirmedViewMode = mode;
+	    else if (view === 'pending') pendingViewMode = mode;
+	    else if (view === 'all') allViewMode = mode;
+	    
+	    // Update toggle buttons
+	    const container = document.getElementById(`${view}-view`);
+	    const buttons = container.querySelectorAll('.view-toggle-btn');
+	    buttons.forEach(btn => {
+		btn.classList.remove('active');
+		if ((mode === 'card' && btn.textContent.includes('Detalle')) ||
+		    (mode === 'compact' && btn.textContent.includes('Libro'))) {
+		    btn.classList.add('active');
+		}
+	    });
+	    
+	    // Reload the view
+	    if (view === 'confirmed') loadConfirmedReservations();
+	    else if (view === 'pending') loadPendingReservations();
+	    else if (view === 'all') loadAllReservations();
+	}
 
         // Tab switching
         function switchTab(view) {
@@ -1699,9 +1757,10 @@
 	    }
 	}
 
+	//self explanatory
 	function renderCompactView(container, reservations) {
 	    // Sort by time
-	    const sorted = reservations.filter(r => !r.cancelled).sort((a, b) => {
+	    const sorted = reservations.filter(r => !r.cancelled && r.user_confirmed).sort((a, b) => {
 		return a.hora.localeCompare(b.hora);
 	    });
 	    
@@ -1709,45 +1768,49 @@
 	    const morning = sorted.filter(r => r.hora < '19:00');
 	    const evening = sorted.filter(r => r.hora >= '19:00');
 	    
-	    // Render morning section
-	    const morningSection = document.createElement('div');
-	    morningSection.className = 'compact-section';
-	    morningSection.innerHTML = `
-		<div class="compact-section-header">━━━━━ Mañana ━━━━━</div>
-	    `;
-	    
-	    if (morning.length === 0) {
-		morningSection.innerHTML += '<div class="compact-empty">No hay reservas</div>';
-	    } else {
+	    // Only render morning section if there are reservations
+	    if (morning.length > 0) {
+		const morningSection = document.createElement('div');
+		morningSection.className = 'compact-section';
+	morningSection.innerHTML = `
+	    <div class="compact-section-header" style="color: #f4a460; border-bottom-color: #f4a460;">COMIDA</div>
+	`;
+		
 		morning.forEach(res => {
 		    morningSection.appendChild(createCompactReservation(res));
 		});
+		
+		container.appendChild(morningSection);
 	    }
 	    
-	    // Render evening section
-	    const eveningSection = document.createElement('div');
-	    eveningSection.className = 'compact-section';
-	    eveningSection.innerHTML = `
-		<div class="compact-section-header">━━━━━ Tarde ━━━━━</div>
-	    `;
-	    
-	    if (evening.length === 0) {
-		eveningSection.innerHTML += '<div class="compact-empty">No hay reservas</div>';
-	    } else {
+	    // Only render evening section if there are reservations
+	    if (evening.length > 0) {
+		const eveningSection = document.createElement('div');
+		eveningSection.className = 'compact-section';
+		eveningSection.innerHTML = `
+		    <div class="compact-section-header" style="color: #4a5568; border-bottom-color: #4a5568;">CENA</div>
+		`;
+		
 		evening.forEach(res => {
 		    eveningSection.appendChild(createCompactReservation(res));
 		});
+		
+		container.appendChild(eveningSection);
 	    }
 	    
-	    container.appendChild(morningSection);
-	    container.appendChild(eveningSection);
+	    // If no reservations at all, show empty state
+	    if (morning.length === 0 && evening.length === 0) {
+		container.innerHTML = '<div class="compact-empty">No hay reservas confirmadas</div>';
+	    }
 	}
 
 	function createCompactReservation(res) {
 	    const div = document.createElement('div');
 	    let className = 'compact-reservation';
 	    if (res.cancelled) className += ' cancelled';
+	    else if (!res.user_confirmed) className += ' client-pending';
 	    else if (!res.restaurant_confirmed && res.user_confirmed) className += ' pending';
+	    else if (res.user_confirmed && res.restaurant_confirmed) className += ' confirmed';
 	    
 	    div.className = className;
 	    
@@ -1757,22 +1820,32 @@
 	    if (!res.cancelled) {
 		actions = `
 		    <div class="compact-actions">
-			<button class="compact-btn call" onclick="callPhone('${res.telefono}')" title="Llamar">📞</button>
+			<button class="compact-btn cancel" onclick="openCancelModal(${res.id})" title="Cancelar">✕</button>
+			<button class="compact-btn call" onclick="callPhone('${res.telefono}')" title="Llamar">☎</button>
+			<button class="compact-btn link" onclick="copyConfirmationLink('${res.confirmation_token}')" title="Copiar enlace">⎘</button>
 			${!res.restaurant_confirmed && res.user_confirmed ? `
-			    <button class="compact-btn approve" onclick="approveReservation(${res.id})" title="Aprobar">✅</button>
+			    <button class="compact-btn approve" onclick="approveReservation(${res.id})" title="Aprobar">✓</button>
 			` : ''}
-			<button class="compact-btn cancel" onclick="openCancelModal(${res.id})" title="Cancelar">❌</button>
-			<button class="compact-btn link" onclick="copyConfirmationLink('${res.confirmation_token}')" title="Copiar enlace">🔗</button>
 		    </div>
 		`;
 	    }
 	    
+	    // Add comments if present
+	    const commentsHtml = res.notes ? `
+		<div style="grid-column: 1 / -1; font-size: 0.85rem; color: var(--light-brown); font-style: italic; margin-top: 5px; font-family: Georgia, serif;">
+		    💬 ${res.notes}
+		</div>
+	    ` : '';
+	    
 	    div.innerHTML = `
-		<div class="compact-info">
-		    <span class="compact-name">${res.nombre}</span>
-		    <span class="compact-time">${res.hora}</span>
-		    <span class="compact-people">${personas}</span>
-		    <span class="compact-phone">${res.telefono}</span>
+		<div style="flex: 1;">
+		    <div class="compact-info">
+			<span class="compact-name">${res.nombre}</span>
+			<span class="compact-time">${res.hora}</span>
+			<span class="compact-people">${personas}</span>
+			<span class="compact-phone">${res.telefono}</span>
+		    </div>
+		    ${commentsHtml}
 		</div>
 		${actions}
 	    `;
@@ -1781,43 +1854,73 @@
 	}
 
         // Render reservations list with date headers
-        function renderReservationsList(containerId, reservations) {
-            const container = document.getElementById(containerId);
-            
-            if (!reservations || reservations.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📭</div>
-                        <p>No hay reservas que mostrar</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = '';
-            
-            // Group by date
-            const byDate = {};
-            reservations.forEach(res => {
-                const date = res.fecha;
-                if (!byDate[date]) {
-                    byDate[date] = [];
-                }
-                byDate[date].push(res);
-            });
-            
-            // Render each date group
-            Object.keys(byDate).sort().forEach(date => {
-                const header = document.createElement('div');
-                header.className = 'date-header';
-                header.textContent = formatDate(date);
-                container.appendChild(header);
-                
-                byDate[date].forEach(res => {
-                    container.appendChild(createReservationCard(res));
-                });
-            });
-        }
+	function renderReservationsList(containerId, reservations) {
+	    const container = document.getElementById(containerId);
+	    
+	    if (!reservations || reservations.length === 0) {
+		container.innerHTML = `
+		    <div class="empty-state">
+			<div class="empty-state-icon">📭</div>
+			<p>No hay reservas que mostrar</p>
+		    </div>
+		`;
+		return;
+	    }
+	    
+	    // Determine which view mode to use
+	    let mode = 'card';
+	    if (containerId === 'confirmed-list') mode = confirmedViewMode;
+	    else if (containerId === 'pending-list') mode = pendingViewMode;
+	    else if (containerId === 'all-list') mode = allViewMode;
+	    
+	    container.innerHTML = '';
+	    
+	    if (mode === 'compact') {
+		// Group by date for compact view
+		const byDate = {};
+		reservations.forEach(res => {
+		    const date = res.fecha;
+		    if (!byDate[date]) byDate[date] = [];
+		    byDate[date].push(res);
+		});
+		
+		Object.keys(byDate).sort().forEach(date => {
+		    const dateSection = document.createElement('div');
+		    dateSection.style.marginBottom = '20px';
+		    
+		    const header = document.createElement('div');
+		    header.className = 'date-header';
+		    header.textContent = formatDate(date);
+		    dateSection.appendChild(header);
+		    
+		    // Use existing compact render function
+		    const tempContainer = document.createElement('div');
+		    renderCompactView(tempContainer, byDate[date]);
+		    dateSection.appendChild(tempContainer);
+		    
+		    container.appendChild(dateSection);
+		});
+	    } else {
+		// Group by date for card view
+		const byDate = {};
+		reservations.forEach(res => {
+		    const date = res.fecha;
+		    if (!byDate[date]) byDate[date] = [];
+		    byDate[date].push(res);
+		});
+		
+		Object.keys(byDate).sort().forEach(date => {
+		    const header = document.createElement('div');
+		    header.className = 'date-header';
+		    header.textContent = formatDate(date);
+		    container.appendChild(header);
+		    
+		    byDate[date].forEach(res => {
+			container.appendChild(createReservationCard(res));
+		    });
+		});
+	    }
+	}
 
         // Create reservation card
         function createReservationCard(res) {
@@ -1829,7 +1932,7 @@
                 statusBadges.push('<span class="status-badge cancelled">❌ Cancelada</span>');
             } else {
                 if (res.user_confirmed && res.restaurant_confirmed) {
-                    statusBadges.push('<span class="status-badge confirmed">✅ Confirmada</span>');
+                    statusBadges.push('<span class="status-badge confirmed">p Confirmada</span>');
                 } else if (res.user_confirmed && !res.restaurant_confirmed) {
                     statusBadges.push('<span class="status-badge pending">⏳ Pendiente aprobación</span>');
                 } else {
@@ -1839,24 +1942,24 @@
             
             let actions = '';
             if (!res.cancelled) {
-                actions = `
-                    <div class="reservation-actions">
-                        <button class="action-btn call" onclick="callPhone('${res.telefono}')">
-                            📞 Llamar
-                        </button>
-                        ${!res.restaurant_confirmed && res.user_confirmed ? `
-                            <button class="action-btn approve" onclick="approveReservation(${res.id})">
-                                ✅ Aprobar
-                            </button>
-                        ` : ''}
-                        <button class="action-btn cancel" onclick="openCancelModal(${res.id})">
-                            ❌ Cancelar
-                        </button>
-                        <button class="action-btn view-link" onclick="copyConfirmationLink('${res.confirmation_token}')">
-                            🔗 Copiar enlace
-                        </button>
-                    </div>
-                `;
+		actions = `
+		    <div class="reservation-actions" style="justify-content: flex-end;>
+			<button class="action-btn cancel" onclick="openCancelModal(${res.id})">
+			    ❌ Cancelar
+			</button>
+			<button class="action-btn call" onclick="callPhone('${res.telefono}')">
+			    📞 Llamar
+			</button>
+			<button class="action-btn view-link" onclick="copyConfirmationLink('${res.confirmation_token}')">
+			    🔗 Copiar enlace
+			</button>
+			${!res.restaurant_confirmed && res.user_confirmed ? `
+			    <button class="action-btn approve" onclick="approveReservation(${res.id})">
+				✓ Aprobar
+			    </button>
+			` : ''}
+		    </div>
+		`;
             }
             
             card.innerHTML = `
@@ -1891,12 +1994,12 @@
                         <span class="detail-label">⏰ Creada</span>
                         <span class="detail-value">${formatDateTime(res.created_at)}</span>
                     </div>
-                    ${res.notes ? `
-                        <div class="detail-item" style="grid-column: 1 / -1;">
-                            <span class="detail-label">📝 Notas</span>
-                            <span class="detail-value">${res.notes}</span>
-                        </div>
-                    ` : ''}
+		${res.notes ? `
+		    <div class="detail-item" style="grid-column: 1 / -1;">
+			<span class="detail-label">📝 Comentarios del cliente</span>
+			<span class="detail-value" style="white-space: pre-wrap;">${res.notes}</span>
+		    </div>
+		` : ''}
                     ${res.cancelled ? `
                         <div class="detail-item" style="grid-column: 1 / -1;">
                             <span class="detail-label">❌ Cancelada por</span>
@@ -2016,60 +2119,73 @@
             cancellingReservationId = null;
         }
 
-        function confirmCancel() {
-            const reason = document.getElementById('cancel-reason').value;
-            
-            fetch(`${API_BASE}/api/admin/cancel/${cancellingReservationId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ reason: reason || 'Sin motivo especificado' })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.message || 'Error desconocido');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                closeCancelModal();
-                alert('✅ ' + (data.message || 'Reserva cancelada exitosamente'));
-                refreshCurrentView();
-            })
-            .catch(error => {
-                console.error('Error cancelling reservation:', error);
-                alert('❌ ' + error.message);
-            });
-        }
+	function confirmCancel() {
+	    const reason = document.getElementById('cancel-reason').value;
+	    
+	    fetch(`${API_BASE}/api/admin/cancel/${cancellingReservationId}`, {
+		method: 'POST',
+		headers: {
+		    'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ reason: reason || 'Sin motivo especificado' })
+	    })
+	    .then(response => {
+		if (!response.ok) {
+		    return response.json().then(data => {
+			throw new Error(data.message || 'Error desconocido');
+		    });
+		}
+		return response.json();
+	    })
+	    .then(data => {
+		closeCancelModal();
+		alert('✅ ' + (data.message || 'Reserva cancelada exitosamente'));
+		
+		// Auto-refresh based on current view
+		if (currentView === 'calendar' && selectedDate) {
+		    selectDate(selectedDate);
+		} else {
+		    refreshCurrentView();
+		}
+	    })
+	    .catch(error => {
+		console.error('Error cancelling reservation:', error);
+		alert('❌ ' + error.message);
+	    });
+	}
 
-        function approveReservation(id) {
-            if (!confirm('¿Aprobar esta reserva para grupo grande?')) {
-                return;
-            }
-            
-            fetch(`${API_BASE}/api/admin/approve/${id}`, {
-                method: 'POST'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.message || 'Error desconocido');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                alert('✅ ' + (data.message || 'Reserva aprobada exitosamente'));
-                refreshCurrentView();
-            })
-            .catch(error => {
-                console.error('Error approving reservation:', error);
-                alert('❌ ' + error.message);
-            });
-        }
+
+	function approveReservation(id) {
+	    if (!confirm('¿Aprobar esta reserva para grupo grande?')) {
+		return;
+	    }
+	    
+	    fetch(`${API_BASE}/api/admin/approve/${id}`, {
+		method: 'POST'
+	    })
+	    .then(response => {
+		if (!response.ok) {
+		    return response.json().then(data => {
+			throw new Error(data.message || 'Error desconocido');
+		    });
+		}
+		return response.json();
+	    })
+	    .then(data => {
+		alert('✅ ' + (data.message || 'Reserva aprobada exitosamente'));
+		
+		// Auto-refresh based on current view
+		if (currentView === 'calendar' && selectedDate) {
+		    selectDate(selectedDate);
+		} else {
+		    refreshCurrentView();
+		}
+	    })
+	    .catch(error => {
+		console.error('Error approving reservation:', error);
+		alert('❌ ' + error.message);
+	    });
+	}
 
         function copyConfirmationLink(token) {
             const link = `${window.location.origin}/confirm/${token}`;
