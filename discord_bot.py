@@ -42,7 +42,7 @@ CONFIRMED_CHANNEL_ID = int(os.getenv('CONFIRMED_CHANNEL_ID', '0'))
 PENDING_CHANNEL_ID = int(os.getenv('PENDING_CHANNEL_ID', '0'))
 TODAY_CHANNEL_ID = int(os.getenv('TODAY_CHANNEL_ID', '0'))
 LOG_CHANNEL_ID = int(os.getenv('LOG_CHANNEL_ID', '0'))
-
+last_checked_action_id = 0 #for 'real time' updates
 @contextmanager
 def get_db():
     """Database connection context manager"""
@@ -573,6 +573,8 @@ async def sync_all_channels():
 
 @bot.event
 async def on_ready():
+    global last_checked_action_id
+    
     print(f'✅ Bot conectado como {bot.user}')
     print(f'📊 Canales configurados:')
     print(f'   - Hoy: {TODAY_CHANNEL_ID}')
@@ -580,16 +582,63 @@ async def on_ready():
     print(f'   - Pendientes: {PENDING_CHANNEL_ID}')
     print(f'   - Log: {LOG_CHANNEL_ID}')
     
-    # Start periodic refresh
+    # Initialize last_checked_action_id to latest action in DB
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT MAX(id) as max_id FROM action_log')
+        result = cursor.fetchone()
+        last_checked_action_id = result['max_id'] if result['max_id'] else 0
+    
+    print(f'🔄 Iniciando sync en tiempo real desde action_log ID: {last_checked_action_id}')
+    
+    # Start periodic refresh (every 10 min as backup)
     if not refresh_task.is_running():
         refresh_task.start()
+    
+    # Start real-time sync (every 5 seconds)
+    if not realtime_sync_task.is_running():
+        realtime_sync_task.start()
 
+
+#SYNC LOOPS
 @tasks.loop(minutes=10)
 async def refresh_task():
     """Periodically check if channels need syncing"""
     logger.info("Running periodic sync check...")
     await sync_all_channels()
     logger.info("Sync check complete")
+@tasks.loop(seconds=5)
+async def realtime_sync_task():
+    """Check for new reservations every 5 seconds and sync immediately"""
+    global last_checked_action_id
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get latest action log entries since last check
+            cursor.execute('''
+                SELECT id, reservation_id, action_type, timestamp
+                FROM action_log
+                WHERE id > ?
+                ORDER BY id ASC
+            ''', (last_checked_action_id,))
+            
+            new_actions = cursor.fetchall()
+            
+            if new_actions:
+                logger.info(f"Found {len(new_actions)} new actions, syncing channels...")
+                
+                # Update last checked ID
+                last_checked_action_id = new_actions[-1]['id']
+                
+                # Sync channels immediately
+                await sync_all_channels()
+                
+                logger.info("Real-time sync complete")
+    
+    except Exception as e:
+        logger.error(f"Error in real-time sync: {str(e)}")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
