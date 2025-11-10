@@ -351,6 +351,20 @@ def is_hour_available(fecha_str, hora_str):
     blocked = get_blocked_hours_for_date(fecha_str)
     return hora_str not in blocked
 
+def notify_managers(message):
+    """Send SMS to manager phone numbers for new reservations/cancellations"""
+    manager_phones = os.getenv('MANAGER_PHONES', '').split(',')
+    manager_phones = [p.strip() for p in manager_phones if p.strip()]
+    
+    if not manager_phones:
+        logger.warning("No manager phones configured!")
+        return
+    
+    for phone in manager_phones:
+        send_sms(phone, message)
+        logger.info(f"Manager notification sent to {phone}")
+
+
 # ============================================================================
 # API ENDPOINTS
 # ============================================================================
@@ -817,10 +831,19 @@ def confirm_reservation(token):
                 
                 # Log action
                 log_action(reservation['id'], 'user_confirmed', 'customer', 'Via SMS link')
-                
+
                 # Send confirmation SMS
                 send_sms(reservation['telefono'], message)
-                
+
+                # Notify managers of new confirmed/pending reservation
+                manager_notif = (
+                    f"Nueva reserva {'PENDIENTE' if is_large else 'CONFIRMADA'}: "
+                    f"{fecha_display} {reservation['hora']}. "
+                    f"{reservation['personas']} personas, {reservation['nombre']}. "
+                    f"Tel: {reservation['telefono']}"
+                )
+                notify_managers(manager_notif)
+
                 # Create cancellation link
                 cancel_link = f"{DOMAIN}/cancel/{reservation['confirmation_token']}"
                 
@@ -964,6 +987,14 @@ def cancel_reservation(token):
                 f"Esperamos verte pronto. - {RESTAURANT_NAME}"
             )
             send_sms(reservation['telefono'], cancel_message)
+            # Notify managers of cancellation
+            manager_cancel_notif = (
+                f"Cancelación: {reservation['nombre']}, "
+                f"{reservation['personas']} personas, "
+                f"{fecha_display} {reservation['hora']}. "
+                f"Tel: {reservation['telefono']}"
+            )
+            notify_managers(manager_cancel_notif)
             
             return f'''
                 <!DOCTYPE html>
@@ -1023,6 +1054,11 @@ def cancel_reservation(token):
     except Exception as e:
         logger.error(f"Error cancelling reservation: {str(e)}")
         return "Error procesando la cancelación", 500
+
+
+
+
+
 
 # ============================================================================
 # ADMIN API ENDPOINTS
