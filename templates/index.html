@@ -21,7 +21,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/static/bici_x180.png">
     
 
-    <style>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap');
         * {
             margin: 0;
             padding: 0;
@@ -117,7 +117,7 @@
             right: 2%;
             width: 200px;
             height: 200px;
-            animation: floatSlow 20s ease-in-out infinite;
+            /*animation: floatSlow 20s ease-in-out infinite;*/
             opacity: 0.2;
             filter: drop-shadow(2px 2px 4px rgba(139, 159, 110, 0.2));
         }
@@ -127,7 +127,8 @@
             left: 2%;
             width: 200px;
             height: 200px;
-            animation: floatSlow 25s ease-in-out infinite reverse;
+	    /*
+            animation: floatSlow 25s ease-in-out infinite reverse;*/
             transform: scaleX(-1);
             opacity: 0.2;
             filter: drop-shadow(2px 2px 4px rgba(139, 159, 110, 0.2));
@@ -182,7 +183,7 @@
             font-weight: 400;
             letter-spacing: 0.5px;
             font-style: italic;
-            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive, Georgia, serif;
         }
 
         .nav-menu {
@@ -239,7 +240,7 @@
             margin-bottom: 10px;
             text-shadow: 3px 3px 12px rgba(0,0,0,0.6);
             animation: fadeInUp 0.8s ease;
-            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive, Georgia, serif;
             letter-spacing: 1px;
         }
         
@@ -347,7 +348,7 @@
             color: var(--warm-brown);
             margin-bottom: 25px;
             font-weight: 300;
-            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive, Georgia, serif;
             position: relative;
         }
         
@@ -437,7 +438,7 @@
             font-size: 2rem;
             color: var(--warm-brown);
             margin-bottom: 10px;
-            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive, Georgia, serif;
             font-weight: 300;
         }
 
@@ -606,7 +607,7 @@
             color: var(--warm-brown);
             margin-bottom: 20px;
             text-align: center;
-            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive, Georgia, serif;
             font-weight: 300;
         }
 
@@ -662,7 +663,7 @@
             font-size: 1.5rem;
             color: var(--sage-green);
             opacity: 0.2;
-            font-family: 'Brush Script MT', cursive;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive;
         }
 
         .form-header {
@@ -674,7 +675,7 @@
             font-size: 2rem;
             color: var(--warm-brown);
             margin-bottom: 10px;
-            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive, Georgia, serif;
             font-weight: 300;
         }
 
@@ -982,7 +983,7 @@
         
         /* Handwritten accent elements */
         .handwritten-accent {
-            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive, Georgia, serif;
             color: var(--olive);
             font-size: 1.1rem;
             margin: 10px 0;
@@ -1047,7 +1048,7 @@
             font-size: 1.4rem;
             margin-bottom: 20px;
             letter-spacing: 1px;
-            font-family: 'Brush Script MT', cursive, Georgia, serif;
+            font-family: 'Dancing Script', 'Brush Script MT', cursive, Georgia, serif;
         }
         
         .footer-logo-img {
@@ -1492,6 +1493,24 @@ filter: brightness(0) invert(1);
 		    </div>
 		    <input type="hidden" id="hora" name="hora" value="">
 		</div>
+                <!-- Optional comment field - discrete and optional -->
+                <div class="form-group" style="margin-top: 25px;">
+                    <label for="notes" style="font-size: 0.95rem; opacity: 0.85; font-weight: normal;">
+                        <span style="opacity: 0.7;">Comentario opcional</span>
+                    </label>
+                    <textarea 
+                        id="notes" 
+                        name="notes" 
+                        rows="2" 
+                        placeholder="Alergias, silla de bebé..."
+                        style="width: 100%; padding: 12px; border: 1px solid rgba(139, 159, 110, 0.25); 
+                               border-radius: 8px; font-family: Georgia, serif; font-size: 0.95rem;
+                               background: rgba(250, 248, 243, 0.5); resize: vertical; min-height: 50px;
+                               transition: all 0.3s ease; color: var(--warm-brown);"
+                        onfocus="this.style.borderColor='var(--sage-green)'; this.style.background='white';"
+                        onblur="this.style.borderColor='rgba(139, 159, 110, 0.25)'; this.style.background='rgba(250, 248, 243, 0.5)';"
+                    ></textarea>
+                </div>
 
                 <button type="submit" class="submit-btn" id="submitBtn" disabled>
                     Confirmar Reserva Ahora
@@ -1708,13 +1727,14 @@ filter: brightness(0) invert(1);
                 phoneNumber = countrySelect.value + phoneNumber;
             }
             
-            const formData = {
-                nombre: document.getElementById('nombre').value,
-                telefono: phoneNumber,
-                personas: document.getElementById('personas').value,
-                fecha: document.getElementById('fecha').value,
-                hora: document.getElementById('hora').value
-            };
+	    const formData = {
+	        nombre: document.getElementById('nombre').value,
+	        telefono: phoneNumber,
+	        personas: document.getElementById('personas').value,
+	        fecha: document.getElementById('fecha').value,
+	        hora: document.getElementById('hora').value,
+	        notes: document.getElementById('notes').value || ''
+	    };
             
             console.log('Sending data:', formData);
             
