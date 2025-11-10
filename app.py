@@ -434,8 +434,8 @@ def create_reservation():
                 INSERT INTO reservations 
                 (nombre, telefono, personas, fecha, hora, 
                  user_confirmed, restaurant_confirmed, 
-                 confirmation_token)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 confirmation_token, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['nombre'],
                 clean_phone,
@@ -444,7 +444,8 @@ def create_reservation():
                 data['hora'],
                 0,  # user_confirmed = False (MUST click SMS link first)
                 0 if is_large else 1,  # restaurant_confirmed based on group size
-                confirmation_token
+                confirmation_token,
+                data.get('notes','')
             ))
             conn.commit()
             reservation_id = cursor.lastrowid
