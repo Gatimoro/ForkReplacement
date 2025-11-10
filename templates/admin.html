@@ -389,12 +389,12 @@
         }
 
         .action-btn.call {
-            background: var(--sage-green);
+            background: var(--olive);
             color: white;
         }
 
         .action-btn.call:hover {
-            background: var(--olive);
+            background: var(--warm-brown);
         }
 
         .action-btn.cancel {
@@ -416,12 +416,12 @@
         }
 
         .action-btn.view-link {
-            background: var(--olive);
+            background: var(--sage-green);
             color: white;
         }
 
         .action-btn.view-link:hover {
-            background: var(--warm-brown);
+            background: var(--olive);
         }
 
         /* Raw Database View */
@@ -1330,6 +1330,7 @@
                             <th onclick="sortRawTable('personas', event)">Personas <span class="sort-indicator">↕</span></th>
                             <th onclick="sortRawTable('fecha', event)">Fecha <span class="sort-indicator">↕</span></th>
                             <th onclick="sortRawTable('hora', event)">Hora <span class="sort-indicator">↕</span></th>
+			    <th onclick="sortRawTable('notes', event)">📝 Notas <span class="sort-indicator">↕</span></th>
                             <th onclick="sortRawTable('user_confirmed', event)">Usuario OK <span class="sort-indicator">↕</span></th>
                             <th onclick="sortRawTable('restaurant_confirmed', event)">Rest. OK <span class="sort-indicator">↕</span></th>
                             <th onclick="sortRawTable('cancelled', event)">Cancelada <span class="sort-indicator">↕</span></th>
@@ -1338,7 +1339,7 @@
                     </thead>
                     <tbody id="raw-tbody">
                         <tr>
-                            <td colspan="10" style="text-align: center; padding: 40px;">
+                            <td colspan="11" style="text-align: center; padding: 40px;">
                                 <div class="spinner" style="margin: 0 auto 15px;"></div>
                                 Cargando datos...
                             </td>
@@ -1933,7 +1934,7 @@
                 statusBadges.push('<span class="status-badge cancelled">❌ Cancelada</span>');
             } else {
                 if (res.user_confirmed && res.restaurant_confirmed) {
-                    statusBadges.push('<span class="status-badge confirmed">p Confirmada</span>');
+                    statusBadges.push('<span class="status-badge confirmed">✅ Confirmada</span>');
                 } else if (res.user_confirmed && !res.restaurant_confirmed) {
                     statusBadges.push('<span class="status-badge pending">⏳ Pendiente aprobación</span>');
                 } else {
@@ -2035,7 +2036,7 @@
             if (!rawData || rawData.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="10" style="text-align: center; padding: 40px;">
+                        <td colspan="11" style="text-align: center; padding: 40px;">
                             📭 No hay datos
                         </td>
                     </tr>
@@ -2047,18 +2048,19 @@
             
             rawData.forEach(res => {
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${res.id}</td>
-                    <td>${res.nombre}</td>
-                    <td>${res.telefono}</td>
-                    <td>${res.personas}</td>
-                    <td>${res.fecha}</td>
-                    <td>${res.hora}</td>
-                    <td>${res.user_confirmed ? '✅' : '❌'}</td>
-                    <td>${res.restaurant_confirmed ? '✅' : '❌'}</td>
-                    <td>${res.cancelled ? '✅' : '❌'}</td>
-                    <td>${formatDateTime(res.created_at)}</td>
-                `;
+		row.innerHTML = `
+		    <td>${res.id}</td>
+		    <td>${res.nombre}</td>
+		    <td>${res.telefono}</td>
+		    <td>${res.personas}</td>
+		    <td>${res.fecha}</td>
+		    <td>${res.hora}</td>
+		    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${res.notes || ''}">${res.notes ? '💬 ' + res.notes : '-'}</td>
+		    <td>${res.user_confirmed ? '✅' : '❌'}</td>
+		    <td>${res.restaurant_confirmed ? '✅' : '❌'}</td>
+		    <td>${res.cancelled ? '✅' : '❌'}</td>
+		    <td>${formatDateTime(res.created_at)}</td>
+		`;
                 tbody.appendChild(row);
             });
         }
@@ -2363,26 +2365,39 @@
 		    loadingDefaultHours = false;
 		});
 	}
-        function renderDefaultHoursGrid() {
+   	function renderDefaultHoursGrid() {
             const grid = document.getElementById('default-hours-grid');
             grid.innerHTML = '';
             
-            // Generate all time slots from 9:00 to 22:00 in 30-min increments
-            for (let hour = 9; hour <= 22; hour++) {
-                for (let minute of [0, 30]) {
-                    if (hour === 22 && minute === 30) continue; // Stop at 22:00
-                    
-                    const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                    const isActive = selectedDefaultHours.has(time);
-                    
-                    const slot = document.createElement('div');
-                    slot.className = `default-hour-slot ${isActive ? 'active' : 'inactive'}`;
-                    slot.textContent = time;
-                    slot.onclick = () => toggleDefaultHour(time);
-                    
-                    grid.appendChild(slot);
-                }
-            }
+	    // Generate all time slots from 9:00 to 22:00 in 30-min increments, plus 19:15
+	    for (let hour = 9; hour <= 22; hour++) {
+	        for (let minute of [0, 30]) {
+	    	    if (hour === 22 && minute === 30) continue; // Stop at 22:00
+	    	    
+	    	    const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+	    	    const isActive = selectedDefaultHours.has(time);
+	    	    
+	    	    const slot = document.createElement('div');
+	    	    slot.className = `default-hour-slot ${isActive ? 'active' : 'inactive'}`;
+	    	    slot.textContent = time;
+	    	    slot.onclick = () => toggleDefaultHour(time);
+	    	    
+	    	    grid.appendChild(slot);
+	    	    
+	    	    // Add 19:15 after 19:00
+	    	    if (hour === 19 && minute === 0) {
+	    	        const time1915 = '19:15';
+	    	        const isActive1915 = selectedDefaultHours.has(time1915);
+	    	        
+	    	        const slot1915 = document.createElement('div');
+	    	        slot1915.className = `default-hour-slot ${isActive1915 ? 'active' : 'inactive'}`;
+	    	        slot1915.textContent = time1915;
+	    	        slot1915.onclick = () => toggleDefaultHour(time1915);
+	    	        
+	    	        grid.appendChild(slot1915);
+	    	    }
+	        }
+	    }
         }
 
         function toggleDefaultHour(time) {
