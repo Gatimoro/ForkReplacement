@@ -1312,55 +1312,110 @@ filter: brightness(0) invert(1);
         </div>
     </div>
 
-    <!-- Menu -->
-    <section class="menu-section" id="carta">
-        <div class="section-header">
-            <h2>Nuestra Carta</h2>
-            <p class="handwritten-accent">Productos frescos del día</p>
-        </div>
-        <div class="menu-scroll">
-            <div class="menu-card vintage-card corner-fold">
-                <img src="/static/dish-paella-marisco.jpg" alt="Paella de Marisco" class="menu-card-image" loading="lazy">
-                <div class="menu-card-content">
-                    <h3>🥘 Paella de Marisco</h3>
-                    <p>Mariscos frescos de la lonja. Quizás la mejor paella de Dénia según nuestros clientes.</p>
-                </div>
-            </div>
-            <div class="menu-card vintage-card corner-fold">
-                <img src="/static/dish-gambones-ajillo.jpg" alt="Gambones al Ajillo" class="menu-card-image" loading="lazy">
-                <div class="menu-card-content">
-                    <h3>🦐 Gambones al Ajillo</h3>
-                    <p>Gambones rojos en aceite de ajo. Un clásico que nunca falla.</p>
-                </div>
-            </div>
-            <div class="menu-card vintage-card corner-fold">
-                <img src="/static/dish-carpaccio.jpg" alt="Carpaccio de Buey" class="menu-card-image" loading="lazy">
-                <div class="menu-card-content">
-                    <h3>🥩 Carpaccio de Buey</h3>
-                    <p>Finas láminas de carne de buey con parmesano y rúcula. Delicado y sofisticado.</p>
-                </div>
-            </div>
-            <div class="menu-card vintage-card corner-fold">
-                <img src="/static/dish-pulpo-gallega.jpg" alt="Pulpo a la Gallega" class="menu-card-image" loading="lazy">
-                <div class="menu-card-content">
-                    <h3>🐙 Pulpo a la Gallega</h3>
-                    <p>Tierno pulpo al estilo gallego. Tradición en cada bocado.</p>
-                </div>
-            </div>
-            <div class="menu-card vintage-card corner-fold">
-                <img src="/static/dish-entrecot-solomillo.jpg" alt="Entrecot de Solomillo" class="menu-card-image" loading="lazy">
-                <div class="menu-card-content">
-                    <h3>🥩 Entrecot de Solomillo</h3>
-                    <p>Carne premium al punto perfecto. Jugoso y lleno de sabor.</p>
-                </div>
+<!-- Menu -->
+<section class="menu-section" id="carta">
+    <div class="section-header">
+        <h2>Nuestra Carta</h2>
+        <p class="handwritten-accent">Productos frescos del día</p>
+    </div>
+    <div class="menu-scroll">
+        <!-- Gamba Roja - FIRST CARD -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/gamba-roja.jpeg" alt="Gamba Roja de Dénia" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🦐 Gamba Roja de Dénia hervida</h3>
+                <p>Delicadeza del mar, cocida al punto para conservar todo su sabor. Un tesoro de Dénia que merece disfrutarse con calma.</p>
             </div>
         </div>
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="/static/menu.pdf" target="_blank" class="hero-cta" style="display: inline-block; font-size: 1rem; padding: 14px 35px;">
-                📋 Ver Carta Completa
-            </a>
+        
+        <!-- Paella de Marisco -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-paella-bogavante.jpeg" alt="Paella de Bogavante" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🥘 Paella de bogavante</h3>
+                <p>Paella tradicional con bogavante, cocinada con el auténtico sabor del Mediterráneo. Un plato lleno de aroma y carácter.</p>
+            </div>
         </div>
-    </section>
+        
+        <!-- Gambones al Ajillo  -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-gambones-ajillo.jpg" alt="Gambones al Ajillo" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🦐 Gambones al ajillo</h3>
+                <p>Gambones en aceite de ajo. Un clásico infalible.</p>
+            </div>
+        </div>
+        
+        <!-- Ensalada de temporada -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-ensalada-temporada.jpeg" alt="Ensalada de Temporada" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🥗 Ensalada de temporada</h3>
+                <p>Con queso de cabra gratinado, fruta de temporada, aguacate y verduras frescas.</p>
+            </div>
+        </div>
+        
+        <!-- Carpaccio de Buey -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-carpaccio.jpg" alt="Carpaccio de Buey" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🥩 Carpaccio de Buey</h3>
+                <p>Finas láminas de carne de buey con parmesano y rúcula. Delicado y sofisticado.</p>
+            </div>
+        </div>
+        
+	<!-- escombros -->
+	<div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-escombros-calamar.jpeg" alt="Escombros de Calamar" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🦑 Escombros de calamar</h3>
+                <p>Trocitos de calamar fritos, tiernos y jugosos, con ese punto crujiente que los hace irresistibles.</p>
+            </div>
+        </div>
+
+        <!-- Entrecot de Solomillo -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-entrecot-solomillo.jpg" alt="Entrecot de Solomillo" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🥩 Entrecot de Solomillo</h3>
+                <p>Carne premium al punto perfecto. Jugoso y lleno de sabor.</p>
+            </div>
+        </div>
+        <!-- Pulpo a la Gallega (nueva foto) -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-pulpo-gallega.jpg" alt="Pulpo a la Gallega" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🐙 Pulpo a la Gallega</h3>
+                <p>Tierno pulpo al estilo gallego. Tradición en cada bocado.</p>
+            </div>
+        </div>
+        
+        <!-- Calamar a la plancha -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-calamar-plancha.jpeg" alt="Calamar a la Plancha" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🦑 Calamar a la plancha</h3>
+                <p>Calamar fresco del Mediterráneo, hecho a la plancha y acompañado de una suave salsa verde. Sabor auténtico del mar con un toque de frescura.</p>
+            </div>
+        </div>
+        
+
+        <!--  Chopitos fritos -->
+        <div class="menu-card vintage-card corner-fold">
+            <img src="/static/dish-chopitos-fritos.jpeg" alt="Chopitos Fritos" class="menu-card-image" loading="lazy">
+            <div class="menu-card-content">
+                <h3>🦑 Chopitos fritos</h3>
+                <p>Pequeñas sepias fritas al estilo mediterráneo, tiernas por dentro y crujientes por fuera.</p>
+            </div>
+        </div>
+        
+    </div>
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="/static/menu.pdf" target="_blank" class="hero-cta" style="display: inline-block; font-size: 1rem; padding: 14px 35px;">
+            📋 Ver Carta Completa
+        </a>
+    </div>
+</section>
 
     <!-- Testimonials -->
     <section class="testimonials">
