@@ -4,37 +4,61 @@ Restaurant Reservation System - Backend API
 Handles reservations and MS confirmations via MensaTek API v7
 """
 
+# Standard library
 import os
 import base64
 import logging
+import secrets  # <-- MOVED HERE
+import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from flask import Flask, request, jsonify, make_response, abort, send_from_directory
+from contextlib import contextmanager
+
+# Third-party
+from flask import Flask, request, jsonify, make_response, abort, send_from_directory, redirect
 from flask_cors import CORS
 import sqlite3
 import requests
-from contextlib import contextmanager
-import json
+from dotenv import load_dotenv
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, To
-from dotenv import load_dotenv  # ADD THIS
+
+# Load environment variables
 load_dotenv()
-# Configure logging
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Timezone configuration
+# ============================================================================
+# METRICS LOGGING HELPERS
+# ============================================================================
+def log_metric(event_type, **kwargs):
+    """Log structured metrics for easy parsing and analysis"""
+    parts = [f"{k}={v}" for k, v in kwargs.items()]
+    logger.info(f"METRIC|{event_type}|{'|'.join(parts)}")
+
+
+# ============================================================================
+# TIMEZONE & TIME HELPERS
+# ============================================================================
+
 TIMEZONE = ZoneInfo('Europe/Madrid')
-#HORAS por defecto, MUTADAS CON load_default_hours_from_file()
-DEFAULT_HOURS = ['13:00', '13:30', '14:00','14:30', '20:30', '21:00', '21:30','22:00']
+
 def now():
     """Get current time in Spanish timezone"""
     return datetime.now(TIMEZONE)
 
-# Flask app
+# ============================================================================
+# FLASK APP INITIALIZATION
+# ============================================================================
+
 app = Flask(__name__)
 CORS(app)
 
@@ -57,6 +81,9 @@ RESTAURANT_PHONE = os.getenv('RESTAURANT_PHONE', '965 78 57 31')
 
 # Database
 DB_PATH = os.getenv('DB_PATH', 'reservations.db')
+
+# Default hours (mutated by load_default_hours_from_file())
+DEFAULT_HOURS = ['13:00', '13:30', '14:00','14:30', '20:30', '21:00', '21:30','22:00']
 
 # ============================================================================
 # DATABASE SETUP
@@ -219,6 +246,7 @@ def send_sms(phone, message):
     except Exception as e:
         logger.error(f"SMS exception: {str(e)}")
         return False
+
 def save_default_hours_to_file():
     """Save DEFAULT_HOURS to a JSON file"""
     try:
@@ -366,8 +394,9 @@ def notify_managers(message):
 
 
 # ============================================================================
-# API ENDPOINTS
+# PUBLIC API ENDPOINTS
 # ============================================================================
+
 @app.route('/reservar', methods=['POST'])
 def create_reservation():
     """Handle reservation form submission"""
@@ -387,7 +416,7 @@ def create_reservation():
         # Clean phone number
         clean_phone = clean_phone_number(data['telefono'])
         
-        # Check for duplicate reservations (only active, user-confirmed ones count)
+        # Check for duplicate reservations (only active, user-confirmed future ones count)
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -417,7 +446,6 @@ def create_reservation():
             }), 400
         
         # Generate confirmation token
-        import secrets
         confirmation_token = secrets.token_urlsafe(16)
         
         # Check if large group (determines auto-approval)
@@ -482,7 +510,13 @@ def create_reservation():
             logger.warning(f"SMS failed for reservation {reservation_id}")
         
         logger.info(f"✅ Reservation created: ID={reservation_id}, Token={confirmation_token}")
-        
+        log_metric('reservation_created', 
+                   id=reservation_id,
+                   personas=personas,
+                   fecha=data['fecha'],
+                   hora=data['hora'],
+                   large_group=is_large,
+                   sms_sent=sms_sent)
         return jsonify({
             'success': True,
             'reservation_id': reservation_id,
@@ -498,69 +532,51 @@ def create_reservation():
             'message': 'Error procesando la reserva. Por favor, intenta de nuevo.'
         }), 500
 
-@app.route('/api/admin/default-hours', methods=['GET'])
-def admin_get_default_hours():
-    """Get current default hours configuration"""
+@app.route('/api/available-hours')
+def api_available_hours():
+    """Get available hours for a specific date (for frontend)"""
     try:
-        # Always read fresh from file
+        # Load fresh hours from file
         load_default_hours_from_file()
         
-        return jsonify({
-            'success': True,
-            'hours': DEFAULT_HOURS
-        })
+        fecha = request.args.get('fecha')
+        if not fecha:
+            return jsonify({'success': False, 'message': 'Fecha requerida'}), 400
         
-    except Exception as e:
-        logger.error(f"Error getting default hours: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@app.route('/api/admin/default-hours', methods=['POST'])
-def admin_set_default_hours():
-    """Update default hours configuration"""
-    try:
-        data = request.json
-        new_hours = data.get('hours', [])
+        # Get available hours (not blocked)
+        available = get_available_hours_for_date(fecha)
         
-        if not new_hours or len(new_hours) == 0:
-            return jsonify({
-                'success': False, 
-                'message': 'Debes seleccionar al menos un horario'
-            }), 400
+        # Additional filtering for today
+        fecha_date = datetime.strptime(fecha, '%Y-%m-%d').date()
+        today = now().date()
         
-        # Validate hours format
-        for hora in new_hours:
-            try:
-                datetime.strptime(hora, '%H:%M')
-            except ValueError:
-                return jsonify({
-                    'success': False,
-                    'message': f'Formato de hora inválido: {hora}'
-                }), 400
-        
-        # Update the global DEFAULT_HOURS variable
-        global DEFAULT_HOURS
-        DEFAULT_HOURS = sorted(new_hours)
-        
-        # Optionally: Save to a config file so it persists across restarts
-        # For now, it will reset on server restart (which is fine for your use case)
-
-        save_default_hours_to_file()
-        logger.info(f"Default hours updated to: {DEFAULT_HOURS}")
+        if fecha_date == today:
+            current_hour = now().hour
+            
+            # Before 7 PM (19:00), only show evening slots (>= 19:00)
+            if current_hour < 19:
+                available = [h for h in available if datetime.strptime(h, '%H:%M').time().hour >= 19]
+            else:
+                # After 7 PM, no bookings for today
+                available = []
+        elif fecha_date < today:
+            # No bookings for past dates
+            available = []
         
         return jsonify({
             'success': True,
-            'message': f'Horarios actualizados: {len(DEFAULT_HOURS)} horarios configurados',
-            'hours': DEFAULT_HOURS
+            'hours': available,
+            'all_blocked': len(available) == 0
         })
         
     except Exception as e:
-        logger.error(f"Error setting default hours: {str(e)}")
+        logger.error(f"Error getting available hours: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # ============================================================================
-# STATIC PAGE ROUTES
+# CONFIRMATION & CANCELLATION ENDPOINTS
 # ============================================================================
+
 @app.route('/confirm/<token>', methods=['GET', 'POST'])
 def confirm_reservation(token):
     """Handle customer confirmation via SMS link"""
@@ -575,18 +591,20 @@ def confirm_reservation(token):
             with get_db() as conn:
                 cursor = conn.cursor()
                 
-                # Look for ANY non-cancelled reservation with this token
+                # Look for ANY non-cancelled FUTURE reservation with this token
                 cursor.execute('''
                     SELECT * FROM reservations 
                     WHERE confirmation_token = ? 
                     AND cancelled = 0
+                    AND datetime(fecha || ' ' || hora) >= datetime('now', 'localtime')
                 ''', (token,))
                 
                 reservation = cursor.fetchone()
                 
-                # Invalid token or cancelled
+                # Invalid token, cancelled, or past reservation
+                # Invalid token, cancelled, or past reservation
                 if not reservation:
-                    logger.warning(f"Invalid token or cancelled: {token}")
+                    logger.warning(f"Invalid token, cancelled, or past reservation: {token}")
                     return '''
                         <!DOCTYPE html>
                         <html lang="es">
@@ -607,8 +625,8 @@ def confirm_reservation(token):
                         </head>
                         <body>
                             <div class="container">
-                                <h1>⚠️ Enlace inválido</h1>
-                                <p>Esta reserva no existe o ya fue cancelada.</p>
+                                <h1>⚠️ Enlace inválido o expirado</h1>
+                                <p>Esta reserva no existe, ya fue cancelada, o ya pasó la fecha.</p>
                                 <a href="/">Volver al inicio</a>
                             </div>
                         </body>
@@ -764,6 +782,7 @@ def confirm_reservation(token):
                     WHERE confirmation_token = ? 
                     AND user_confirmed = 0 
                     AND cancelled = 0
+                    AND datetime(fecha || ' ' || hora) >= datetime('now', 'localtime')
                 ''', (token,))
                 
                 reservation = cursor.fetchone()
@@ -791,7 +810,7 @@ def confirm_reservation(token):
                         <body>
                             <div class="container">
                                 <h1>⚠️ Enlace inválido o expirado</h1>
-                                <p>Esta reserva ya fue confirmada o el enlace no es válido.</p>
+                                <p>Esta reserva ya fue confirmada, cancelada, o ya pasó la fecha.</p>
                                 <a href="/">Volver al inicio</a>
                             </div>
                         </body>
@@ -832,7 +851,13 @@ def confirm_reservation(token):
                 
                 # Log action
                 log_action(reservation['id'], 'user_confirmed', 'customer', 'Via SMS link')
-
+                # log metric
+                log_metric('user_confirmed',
+                   id=reservation['id'],
+                   personas=reservation['personas'],
+                   fecha=reservation['fecha'],
+                   hora=reservation['hora'],
+                   large_group=is_large)
                 # Send confirmation SMS
                 send_sms(reservation['telefono'], message)
 
@@ -927,7 +952,9 @@ def cancel_reservation(token):
             
             cursor.execute('''
                 SELECT * FROM reservations 
-                WHERE confirmation_token = ? AND cancelled = 0
+                WHERE confirmation_token = ? 
+                AND cancelled = 0
+                AND date(fecha || ' ' || hora) >= datetime('now', 'localtime')
             ''', (token,))
             
             reservation = cursor.fetchone()
@@ -977,7 +1004,13 @@ def cancel_reservation(token):
             
             # Log action
             log_action(reservation['id'], 'cancelled', 'customer', 'Via cancellation link')
-            
+            #and metric
+            log_metric('reservation_cancelled',
+               id=reservation['id'],
+               personas=reservation['personas'],
+               fecha=reservation['fecha'],
+               hora=reservation['hora'],
+               cancelled_by='customer')
             logger.info(f"Reservation {reservation['id']} cancelled by customer")
             
             # Send cancellation SMS
@@ -1058,7 +1091,70 @@ def cancel_reservation(token):
 
 
 
+# ============================================================================
+# STATIC PAGE ROUTES
+# ============================================================================
 
+
+
+@app.route('/tasca-les-monges')
+def home():
+    """Serve the main reservation page"""
+    try:
+        with open('templates/index.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "index.html not found", 404
+@app.route('/')
+def index():
+    return home()
+
+@app.route('/test-contact')
+def test_contact():
+    try:
+        with open('./test_contact.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "test_contact.html not found", 404   
+
+@app.route('/success')
+def success_page():
+    """Serve the success page"""
+    try:
+        try:
+            with open('templates/success.html', 'r', encoding='utf-8') as f:
+                return f.read()
+        except FileNotFoundError:
+            with open('success.html', 'r', encoding='utf-8') as f:
+                return f.read()
+    except FileNotFoundError:
+        return "success.html not found", 404
+
+@app.route('/error')
+def error_page():
+    """Serve the error page"""
+    try:
+        try:
+            with open('templates/error.html', 'r', encoding='utf-8') as f:
+                return f.read()
+        except FileNotFoundError:
+            with open('error.html', 'r', encoding='utf-8') as f:
+                return f.read()
+    except FileNotFoundError:
+        return "error.html not found", 404
+
+@app.route('/admin')
+def admin_page():
+    """Serve the admin panel"""
+    try:
+        try:
+            with open('templates/admin.html', 'r', encoding='utf-8') as f:
+                return f.read()
+        except FileNotFoundError:
+            with open('admin.html', 'r', encoding='utf-8') as f:
+                return f.read()
+    except FileNotFoundError:
+        return "admin.html not found", 404
 
 #menu link
 @app.route('/la-carta')
@@ -1067,6 +1163,7 @@ def show_menu():
         return send_from_directory('static', 'menu.pdf')
     except FileNotFoundError:
         abort(404, description="Menu PDF not found")
+
 # ============================================================================
 # ADMIN API ENDPOINTS
 # ============================================================================
@@ -1289,7 +1386,14 @@ def admin_cancel_reservation(reservation_id):
             
             # Log action
             log_action(reservation_id, 'cancelled', 'admin', reason)
-            
+            #and metric
+            log_metric('reservation_cancelled',
+                   id=reservation_id,
+                   personas=reservation['personas'],
+                   fecha=reservation['fecha'],
+                   hora=reservation['hora'],
+                   cancelled_by='admin',
+                   reason=reason)
             # Send SMS notification
             fecha_display = format_date_spanish(reservation['fecha'])
             message = (
@@ -1343,7 +1447,12 @@ def admin_approve_reservation(reservation_id):
             
             # Log action
             log_action(reservation_id, 'restaurant_confirmed', 'admin', 'Aprobado desde panel admin')
-            
+            #and metric
+            log_metric('reservation_approved',
+                   id=reservation_id,
+                   personas=reservation['personas'],
+                   fecha=reservation['fecha'],
+                   hora=reservation['hora'])       
             # Send SMS notification
             fecha_display = format_date_spanish(reservation['fecha'])
             message = (
@@ -1364,108 +1473,69 @@ def admin_approve_reservation(reservation_id):
         logger.error(f"Error approving reservation: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-
-@app.route('/admin')
-def admin_page():
-    """Serve the admin panel"""
+@app.route('/api/admin/default-hours', methods=['GET'])
+def admin_get_default_hours():
+    """Get current default hours configuration"""
     try:
-        try:
-            with open('templates/admin.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            with open('admin.html', 'r', encoding='utf-8') as f:
-                return f.read()
-    except FileNotFoundError:
-        return "admin.html not found", 404
-
-#- ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - 
-
-@app.route('/test-contact')
-def test_contact():
-    try:
-        with open('./test_contact.html', 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        return "test_contact.html not found", 404   
-
-
-@app.route('/tasca-les-monges')
-def home():
-    """Serve the main reservation page"""
-    try:
-        with open('templates/index.html', 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        return "index.html not found", 404
-@app.route('/')
-def index():
-    return home()
-@app.route('/success')
-def success_page():
-    """Serve the success page"""
-    try:
-        try:
-            with open('templates/success.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            with open('success.html', 'r', encoding='utf-8') as f:
-                return f.read()
-    except FileNotFoundError:
-        return "success.html not found", 404
-
-@app.route('/error')
-def error_page():
-    """Serve the error page"""
-    try:
-        try:
-            with open('templates/error.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            with open('error.html', 'r', encoding='utf-8') as f:
-                return f.read()
-    except FileNotFoundError:
-        return "error.html not found", 404
-
-@app.route('/api/available-hours')
-def api_available_hours():
-    """Get available hours for a specific date (for frontend)"""
-    try:
-        # Load fresh hours from file
+        # Always read fresh from file
         load_default_hours_from_file()
-        
-        fecha = request.args.get('fecha')
-        if not fecha:
-            return jsonify({'success': False, 'message': 'Fecha requerida'}), 400
-        
-        # Get available hours (not blocked)
-        available = get_available_hours_for_date(fecha)
-        
-        # Additional filtering for today
-        fecha_date = datetime.strptime(fecha, '%Y-%m-%d').date()
-        today = now().date()
-        
-        if fecha_date == today:
-            current_hour = now().hour
-            
-            # Before 7 PM (19:00), only show evening slots (>= 19:00)
-            if current_hour < 19:
-                available = [h for h in available if datetime.strptime(h, '%H:%M').time().hour >= 19]
-            else:
-                # After 7 PM, no bookings for today
-                available = []
-        elif fecha_date < today:
-            # No bookings for past dates
-            available = []
         
         return jsonify({
             'success': True,
-            'hours': available,
-            'all_blocked': len(available) == 0
+            'hours': DEFAULT_HOURS
         })
         
     except Exception as e:
-        logger.error(f"Error getting available hours: {str(e)}")
+        logger.error(f"Error getting default hours: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/admin/default-hours', methods=['POST'])
+def admin_set_default_hours():
+    """Update default hours configuration"""
+    try:
+        data = request.json
+        new_hours = data.get('hours', [])
+        
+        if not new_hours or len(new_hours) == 0:
+            return jsonify({
+                'success': False, 
+                'message': 'Debes seleccionar al menos un horario'
+            }), 400
+        
+        # Validate hours format
+        for hora in new_hours:
+            try:
+                datetime.strptime(hora, '%H:%M')
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'message': f'Formato de hora inválido: {hora}'
+                }), 400
+        
+        # Update the global DEFAULT_HOURS variable
+        global DEFAULT_HOURS
+        DEFAULT_HOURS = sorted(new_hours)
+        
+        # Optionally: Save to a config file so it persists across restarts
+        # For now, it will reset on server restart (which is fine for your use case)
+
+        save_default_hours_to_file()
+        logger.info(f"Default hours updated to: {DEFAULT_HOURS}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Horarios actualizados: {len(DEFAULT_HOURS)} horarios configurados',
+            'hours': DEFAULT_HOURS
+        })
+        
+    except Exception as e:
+        logger.error(f"Error setting default hours: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+#- ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - ADMIN END - 
+
+
 
 
 @app.route('/api/admin/blocked-hours/<fecha>')
@@ -1618,27 +1688,49 @@ def admin_unblock_all_hours(fecha):
         logger.error(f"Error unblocking all hours: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
 # ============================================================================
-# MAIN
+# INITIALIZATION - Runs on import (works with gunicorn)
+# ============================================================================
+
+# Initialize database on startup
+init_database()
+
+# Load default hours from file
+load_default_hours_from_file()
+
+# Log configuration with detailed info
+logger.info("=" * 70)
+logger.info("🍽️  Restaurant Reservation System Starting")
+logger.info("=" * 70)
+logger.info(f"📱 SMS Enabled: {SMS_ENABLED}")
+if SMS_ENABLED:
+    logger.info(f"   SMS User: {MENSATEK_API_USER}")
+    logger.info(f"   Manager Phones: {os.getenv('MANAGER_PHONES', 'NOT SET')}")
+logger.info(f"👥 Large Group Threshold: >{LARGE_GROUP_THRESHOLD} people")
+logger.info(f"🌐 Domain: {DOMAIN}")
+logger.info(f"🏪 Restaurant: {RESTAURANT_NAME}")
+logger.info(f"📞 Restaurant Phone: {RESTAURANT_PHONE}")
+logger.info(f"💾 Database: {DB_PATH}")
+logger.info(f"🕐 Default Hours: {DEFAULT_HOURS}")
+logger.info(f"   Total hours configured: {len(DEFAULT_HOURS)}")
+
+# Show breakdown of lunch vs dinner hours
+lunch_hours = [h for h in DEFAULT_HOURS if datetime.strptime(h, '%H:%M').hour < 19]
+dinner_hours = [h for h in DEFAULT_HOURS if datetime.strptime(h, '%H:%M').hour >= 19]
+logger.info(f"   Lunch slots ({len(lunch_hours)}): {lunch_hours}")
+logger.info(f"   Dinner slots ({len(dinner_hours)}): {dinner_hours}")
+
+# Show timezone info
+logger.info(f"⏰ Timezone: Europe/Madrid (current time: {now().strftime('%Y-%m-%d %H:%M:%S')})")
+logger.info("=" * 70)
+
+# ============================================================================
+# MAIN - Only for direct execution (flask run or python app.py)
 # ============================================================================
 
 if __name__ == '__main__':
-    # Initialize database on startup
-    init_database()
-    #load hours
-    load_default_hours_from_file()
-    # Log configuration
-    logger.info("=" * 70)
-    logger.info("Starting Restaurant Reservation System")
-    logger.info("=" * 70)
-    logger.info(f"SMS Enabled: {SMS_ENABLED}")
-    logger.info(f"Large Group Threshold: >{LARGE_GROUP_THRESHOLD} people")
-    logger.info(f"Domain: {DOMAIN}")
-    logger.info(f"Restaurant: {RESTAURANT_NAME}")
-    logger.info(f"Database: {DB_PATH}")
-    logger.info("=" * 70)
-    
-    # Start server
+    # Start server (only when running directly, not with gunicorn)
     app.run(
         host='0.0.0.0',
         port=5000,
