@@ -8,7 +8,7 @@ Handles reservations and MS confirmations via MensaTek API v7
 import os
 import base64
 import logging
-import secrets  # <-- MOVED HERE
+import secrets  
 import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -21,7 +21,7 @@ import sqlite3
 import requests
 from dotenv import load_dotenv
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To
+from sendgrid.helpers.mail import Mail, Email, To, ReplyTo
 
 # Load environment variables
 load_dotenv()
@@ -1095,8 +1095,6 @@ def cancel_reservation(token):
 # STATIC PAGE ROUTES
 # ============================================================================
 
-
-
 @app.route('/tasca-les-monges')
 def home():
     """Serve the main reservation page"""
@@ -1105,17 +1103,82 @@ def home():
             return f.read()
     except FileNotFoundError:
         return "index.html not found", 404
+
 @app.route('/')
 def index():
     return home()
 
-@app.route('/test-contact')
-def test_contact():
+@app.route('/contact', methods=['GET'])
+def contact_page():
     try:
-        with open('./test_contact.html', 'r', encoding='utf-8') as f:
+        with open('templates/contact.html', 'r', encoding='utf-8') as f:
             return f.read()
     except FileNotFoundError:
-        return "test_contact.html not found", 404   
+        return "contact.html not found", 404   
+
+@app.route('/contacto', methods=['POST'])
+def contact_form():
+    """Handle contact form submission via SendGrid"""
+    try:
+        data = request.json
+        logger.info(f"📧 Received contact form: {data}")
+        
+        # Validate required fields
+        if not data.get('nombre') or not data.get('email') or not data.get('mensaje'):
+            return jsonify({
+                'success': False,
+                'message': 'Por favor completa todos los campos obligatorios'
+            }), 400
+        
+        # Get SendGrid API key
+        sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
+        if not sendgrid_api_key:
+            logger.error("❌ SENDGRID_API_KEY not configured!")
+            return jsonify({
+                'success': False,
+                'message': 'Error de configuración del servidor'
+            }), 500
+        
+        # Compose email message
+        message = Mail(
+            from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Tasca Les Monges'),
+            to_emails=To('lesmonges@hotmail.com'),  
+            subject=f'📧 Consulta web - {data["nombre"]}',
+            plain_text_content=f"""
+Nueva consulta desde el formulario de contacto:
+
+Nombre: {data['nombre']}
+Email: {data['email']}
+
+Mensaje:
+{data['mensaje']}
+
+---
+Para responder, simplemente contesta este email. 
+Tu respuesta llegará automáticamente a {data['email']}.
+            """
+        )
+        
+        # Set reply-to so you can just hit "Reply" and it goes to the customer
+        message.reply_to = Email(data['email'], data['nombre'])
+        
+        # Send via SendGrid
+        sg = SendGridAPIClient(sendgrid_api_key)
+        response = sg.send(message)
+        
+        logger.info(f"✅ Email sent successfully! Status: {response.status_code}")
+        
+        return jsonify({
+            'success': True,
+            'message': '¡Gracias por tu mensaje! Te responderemos pronto.'
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error processing contact form: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Error procesando el mensaje. Por favor, intenta de nuevo.'
+        }), 500
 
 @app.route('/success')
 def success_page():
