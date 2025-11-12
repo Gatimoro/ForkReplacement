@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from contextlib import contextmanager
 
 # Third-party
-from flask import Flask, request, jsonify, make_response, abort, send_from_directory, redirect
+from flask import Flask, request, jsonify, make_response, abort, send_from_directory
 from flask_cors import CORS
 import sqlite3
 import requests
@@ -1171,8 +1171,6 @@ def show_menu():
 def admin_calendar():
     """Get calendar data with reservation counts per day"""
     try:
-        from datetime import timedelta
-        
         month = int(request.args.get('month', now().month))
         year = int(request.args.get('year', now().year))
         
