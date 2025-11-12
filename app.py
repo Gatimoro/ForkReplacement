@@ -9,7 +9,7 @@ import base64
 import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response, abort, send_from_directory
 from flask_cors import CORS
 import sqlite3
 import requests
@@ -1060,7 +1060,13 @@ def cancel_reservation(token):
 
 
 
-
+#menu link
+@app.route('/la-carta')
+def show_menu():
+    try:
+        return send_from_directory('static', 'menu.pdf')
+    except FileNotFoundError:
+        abort(404, description="Menu PDF not found")
 # ============================================================================
 # ADMIN API ENDPOINTS
 # ============================================================================
@@ -1424,6 +1430,9 @@ def error_page():
 def api_available_hours():
     """Get available hours for a specific date (for frontend)"""
     try:
+        # Load fresh hours from file
+        load_default_hours_from_file()
+        
         fecha = request.args.get('fecha')
         if not fecha:
             return jsonify({'success': False, 'message': 'Fecha requerida'}), 400
