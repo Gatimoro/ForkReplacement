@@ -1818,11 +1818,15 @@
 	    
 	    const personas = res.personas === 1 ? '1 persona' : `${res.personas} personas`;
 	    
+	    // Check if reservation is in the past
+	    const reservationDateTime = new Date(res.fecha + 'T' + res.hora);
+	    const isPast = reservationDateTime < new Date();
+
 	    let actions = '';
-	    if (!res.cancelled) {
-		actions = `
-		    <div class="compact-actions">
-			<button class="compact-btn cancel" onclick="openCancelModal(${res.id})" title="Cancelar">✕</button>
+	    if (!res.cancelled && !isPast) {  // <-- ADD !isPast check here
+	        actions = `
+	    	    <div class="compact-actions">
+	    	        <button class="compact-btn cancel" onclick="openCancelModal(${res.id})" title="Cancelar">✕</button>
 			<button class="compact-btn call" onclick="callPhone('${res.telefono}')" title="Llamar">☎</button>
 			<button class="compact-btn link" onclick="copyConfirmationLink('${res.confirmation_token}')" title="Copiar enlace">⎘</button>
 			${!res.restaurant_confirmed && res.user_confirmed ? `
@@ -1942,13 +1946,16 @@
                 }
             }
             
-            let actions = '';
-            if (!res.cancelled) {
-		actions = `
-		    <div class="reservation-actions">
-			<button class="action-btn cancel" onclick="openCancelModal(${res.id})">
-			    ❌ Cancelar
-			</button>
+ 	    const reservationDateTime = new Date(res.fecha + 'T' + res.hora);
+	    const isPast = reservationDateTime < new Date();
+
+	    let actions = '';
+	    if (!res.cancelled && !isPast) {  // <-- ADD !isPast check here
+	        actions = `
+	    	    <div class="reservation-actions">
+	    	        <button class="action-btn cancel" onclick="openCancelModal(${res.id})">
+	    	    	    ❌ Cancelar
+	    	        </button>
 			<button class="action-btn call" onclick="callPhone('${res.telefono}')">
 			    📞 Llamar
 			</button>
