@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Txoko Bar | Pintxos y Tapas en Dénia</title>
+    <title>Txoko Bar | Pintxos en Dénia</title>
     <link rel="icon" type="image/x-icon" href="/static/txoco-favicon.ico">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;600&display=swap');
 
-    <style>@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Lato:wght@300;400;700&display=swap');
         * {
             margin: 0;
             padding: 0;
@@ -14,21 +15,17 @@
         }
 
         :root {
-            --brown: #4A3428;
-            --dark-brown: #2D1F1A;
-            --light-tan: #E8DCC4;
-            --cream: #F5F0E8;
+            --brown: #3D2E27;
+            --tan: #D4C5B9;
             --white: #FFFFFF;
-            --orange: #D87842;
-            --shadow: 0 2px 8px rgba(74, 52, 40, 0.2);
+            --orange: #C8694A;
         }
 
         body {
-            font-family: 'Lato', Arial, sans-serif;
-            color: var(--dark-brown);
+            font-family: 'Inter', sans-serif;
+            color: var(--brown);
             background: var(--white);
-            line-height: 1.6;
-            overflow-x: hidden;
+            line-height: 1.5;
         }
 
         /* Header */
@@ -37,41 +34,39 @@
             top: 0;
             width: 100%;
             background: var(--white);
-            z-index: 1000;
-            box-shadow: var(--shadow);
-            border-bottom: 3px solid var(--brown);
+            z-index: 100;
+            border-bottom: 2px solid var(--brown);
         }
 
-        .nav-container {
-            padding: 20px 25px;
+        .nav {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1100px;
-            margin: 0 auto;
         }
 
         .logo {
-            font-size: 1.8rem;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            letter-spacing: 4px;
             color: var(--brown);
-            font-weight: 700;
-            letter-spacing: 3px;
-            font-family: 'Oswald', sans-serif;
         }
 
         .nav-links {
-            display: none;
-            gap: 35px;
+            display: flex;
+            gap: 30px;
+            list-style: none;
         }
 
         .nav-links a {
+            color: var(--brown);
             text-decoration: none;
-            color: var(--dark-brown);
+            font-size: 0.9rem;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 0.85rem;
             letter-spacing: 1px;
-            transition: color 0.3s;
         }
 
         .nav-links a:hover {
@@ -80,180 +75,140 @@
 
         /* Hero */
         .hero {
-            margin-top: 77px;
-            height: 60vh;
-            background: linear-gradient(rgba(74, 52, 40, 0.6), rgba(45, 31, 26, 0.7)),
+            margin-top: 68px;
+            height: 65vh;
+            background: linear-gradient(rgba(61, 46, 39, 0.5), rgba(61, 46, 39, 0.7)),
                         url('/static/txoco-exterior.jpg') center/cover;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
-            color: var(--white);
-            padding: 20px;
         }
 
         .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            font-family: 'Oswald', sans-serif;
-            letter-spacing: 8px;
-            margin-bottom: 15px;
-        }
-
-        .hero p {
-            font-size: 1.1rem;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            font-weight: 300;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 5rem;
+            letter-spacing: 12px;
+            color: var(--white);
         }
 
         /* Section */
-        .section {
-            padding: 60px 25px;
-            max-width: 1100px;
+        section {
+            max-width: 1000px;
             margin: 0 auto;
+            padding: 70px 20px;
         }
 
-        .section-title {
-            font-size: 2.2rem;
-            font-weight: 700;
-            font-family: 'Oswald', sans-serif;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-bottom: 35px;
+        h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.5rem;
+            letter-spacing: 4px;
+            margin-bottom: 40px;
             color: var(--brown);
-            border-bottom: 3px solid var(--brown);
-            padding-bottom: 12px;
         }
 
         /* About */
         .about {
-            background: var(--cream);
-        }
-
-        .about-text {
-            font-size: 1.05rem;
-            line-height: 1.8;
-            max-width: 700px;
-            margin: 0 auto;
             text-align: center;
+            background: var(--tan);
         }
 
-        /* Images Grid */
-        .images-grid {
+        .about p {
+            font-size: 1.1rem;
+            font-weight: 300;
+            max-width: 600px;
+            margin: 0 auto 50px;
+        }
+
+        .images {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-            margin-top: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
         }
 
         .img-box {
-            height: 250px;
+            height: 300px;
             background-size: cover;
             background-position: center;
-            box-shadow: var(--shadow);
-        }
-
-        .img-interior {
-            background-image: url('/static/txoco-interior.jpg');
-        }
-
-        .img-pintxos {
-            background-image: url('/static/txoco-pintxos.jpg');
         }
 
         /* Menu */
-        .menu {
-            background: var(--white);
-        }
-
-        .menu-items {
+        .menu-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
         }
 
         .menu-item {
-            border-left: 4px solid var(--brown);
-            padding: 20px;
-            background: var(--cream);
+            padding: 30px 20px;
+            background: var(--tan);
+            border-left: 3px solid var(--brown);
         }
 
         .menu-item h3 {
-            font-size: 1.3rem;
-            font-weight: 700;
-            font-family: 'Oswald', sans-serif;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
             letter-spacing: 2px;
-            text-transform: uppercase;
+            margin-bottom: 8px;
             color: var(--brown);
-            margin-bottom: 10px;
         }
 
         .menu-item p {
-            color: var(--dark-brown);
-            line-height: 1.7;
+            font-size: 0.95rem;
+            font-weight: 300;
         }
 
-        /* Contact Info */
-        .contact-info {
-            background: var(--light-tan);
+        /* Contact */
+        .contact {
+            background: var(--tan);
         }
 
-        .info-grid {
+        .contact-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 50px;
         }
 
-        .info-item {
-            background: var(--white);
+        .contact-item {
             padding: 25px;
-            box-shadow: var(--shadow);
+            background: var(--white);
         }
 
-        .info-label {
-            font-weight: 700;
-            font-family: 'Oswald', sans-serif;
-            text-transform: uppercase;
+        .contact-label {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
             letter-spacing: 2px;
+            margin-bottom: 8px;
             color: var(--brown);
-            margin-bottom: 10px;
+        }
+
+        .contact-value {
             font-size: 0.95rem;
         }
 
-        .info-value {
-            font-size: 1.05rem;
-            color: var(--dark-brown);
-        }
-
-        .info-value a {
-            color: var(--dark-brown);
+        .contact-value a {
+            color: var(--brown);
             text-decoration: none;
-            transition: color 0.3s;
         }
 
-        .info-value a:hover {
+        .contact-value a:hover {
             color: var(--orange);
         }
 
-        /* Contact Form */
-        .contact-form {
+        /* Form */
+        .form {
             background: var(--white);
-            padding: 35px;
-            box-shadow: var(--shadow);
-            max-width: 600px;
-            margin: 0 auto;
+            padding: 40px;
+            max-width: 500px;
+            margin: 0 auto 50px;
         }
 
-        .form-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            font-family: 'Oswald', sans-serif;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: var(--brown);
-            margin-bottom: 25px;
+        .form h3 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
             text-align: center;
         }
 
@@ -261,142 +216,118 @@
             margin-bottom: 20px;
         }
 
-        .form-group label {
+        label {
             display: block;
+            font-size: 0.8rem;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 0.85rem;
             letter-spacing: 1px;
-            color: var(--brown);
             margin-bottom: 8px;
         }
 
-        .form-group input,
-        .form-group textarea {
+        input, textarea {
             width: 100%;
             padding: 12px;
-            border: 2px solid var(--light-tan);
-            background: var(--cream);
-            font-family: 'Lato', Arial, sans-serif;
+            border: 1px solid var(--brown);
+            background: var(--white);
+            font-family: 'Inter', sans-serif;
             font-size: 1rem;
-            transition: border-color 0.3s;
         }
 
-        .form-group input:focus,
-        .form-group textarea:focus {
+        input:focus, textarea:focus {
             outline: none;
-            border-color: var(--brown);
+            border-color: var(--orange);
         }
 
-        .form-group textarea {
+        textarea {
             resize: vertical;
-            min-height: 120px;
+            min-height: 100px;
         }
 
-        .submit-btn {
+        button {
             width: 100%;
             padding: 15px;
             background: var(--brown);
             color: var(--white);
             border: none;
-            font-weight: 700;
-            font-family: 'Oswald', sans-serif;
-            text-transform: uppercase;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.3rem;
             letter-spacing: 2px;
-            font-size: 1.05rem;
             cursor: pointer;
-            transition: background 0.3s;
         }
 
-        .submit-btn:hover {
-            background: var(--dark-brown);
+        button:hover {
+            background: var(--orange);
         }
 
-        .submit-btn:disabled {
+        button:disabled {
             background: #999;
             cursor: not-allowed;
         }
 
-        .form-message {
+        .message {
             margin-top: 15px;
             padding: 12px;
             text-align: center;
             display: none;
         }
 
-        .form-message.success {
+        .message.success {
             background: #d4edda;
             color: #155724;
-            border: 2px solid #c3e6cb;
             display: block;
         }
 
-        .form-message.error {
+        .message.error {
             background: #f8d7da;
             color: #721c24;
-            border: 2px solid #f5c6cb;
             display: block;
         }
 
         /* Map */
-        .map-container {
+        .map {
             width: 100%;
-            height: 350px;
-            margin-top: 40px;
-            box-shadow: var(--shadow);
+            height: 400px;
         }
 
         /* Footer */
-        .footer {
-            background: var(--dark-brown);
-            color: var(--light-tan);
-            padding: 40px 25px;
+        footer {
+            background: var(--brown);
+            color: var(--tan);
+            padding: 50px 20px;
             text-align: center;
         }
 
-        .footer-logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            font-family: 'Oswald', sans-serif;
-            letter-spacing: 3px;
+        footer h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            letter-spacing: 4px;
             margin-bottom: 15px;
+            color: var(--tan);
         }
 
-        .footer p {
-            margin: 8px 0;
-            font-size: 0.95rem;
-        }
-
-        .footer a {
-            color: var(--light-tan);
+        footer a {
+            color: var(--tan);
             text-decoration: none;
-            transition: color 0.3s;
         }
 
-        .footer a:hover {
+        footer a:hover {
             color: var(--orange);
         }
 
-        /* Desktop */
-        @media (min-width: 768px) {
+        /* Mobile */
+        @media (max-width: 768px) {
             .nav-links {
-                display: flex;
+                display: none;
             }
 
             .hero h1 {
-                font-size: 5rem;
+                font-size: 3rem;
+                letter-spacing: 6px;
             }
 
-            .images-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .menu-items {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .info-grid {
-                grid-template-columns: repeat(2, 1fr);
+            h2 {
+                font-size: 2rem;
             }
         }
     </style>
@@ -404,157 +335,134 @@
 <body>
     <!-- Header -->
     <header class="header">
-        <div class="nav-container">
+        <nav class="nav">
             <div class="logo">TXOKO BAR</div>
-            <nav class="nav-links">
-                <a href="#about">Nosotros</a>
-                <a href="#menu">Carta</a>
-                <a href="#contact">Contacto</a>
-            </nav>
-        </div>
+            <ul class="nav-links">
+                <li><a href="#about">Nosotros</a></li>
+                <li><a href="#menu">Carta</a></li>
+                <li><a href="#contact">Contacto</a></li>
+            </ul>
+        </nav>
     </header>
 
     <!-- Hero -->
     <section class="hero">
-        <div>
-            <h1>TXOKO BAR</h1>
-            <p>Pintxos y Tapas en Dénia</p>
-        </div>
+        <h1>TXOKO BAR</h1>
     </section>
 
     <!-- About -->
-    <section class="section about" id="about">
-        <h2 class="section-title">Sobre Nosotros</h2>
-        <p class="about-text">
-            En Txoko Bar servimos pintxos y tapas auténticas en pleno corazón de Dénia.
-            Ambiente relajado, precios accesibles y buena comida. Ven a disfrutar de lo simple y lo bueno.
-        </p>
-
-        <div class="images-grid">
-            <div class="img-box img-interior"></div>
-            <div class="img-box img-pintxos"></div>
+    <section class="about" id="about">
+        <h2>Pintxos y Tapas en Dénia</h2>
+        <p>Comida sencilla, precios justos. En pleno centro de Dénia, Calle Loreto.</p>
+        <div class="images">
+            <div class="img-box" style="background-image: url('/static/txoco-interior.jpg')"></div>
+            <div class="img-box" style="background-image: url('/static/txoco-pintxos.jpg')"></div>
         </div>
     </section>
 
     <!-- Menu -->
-    <section class="section menu" id="menu">
-        <h2 class="section-title">Lo Que Servimos</h2>
-        <div class="menu-items">
+    <section id="menu">
+        <h2>Carta</h2>
+        <div class="menu-grid">
             <div class="menu-item">
                 <h3>Pintxos</h3>
-                <p>Variedad de pintxos frescos preparados diariamente. Precios accesibles.</p>
+                <p>Frescos y variados</p>
             </div>
             <div class="menu-item">
                 <h3>Tapas</h3>
-                <p>Selección de tapas tradicionales para compartir o disfrutar solo.</p>
+                <p>Tradicionales</p>
             </div>
             <div class="menu-item">
                 <h3>Bebidas</h3>
-                <p>Cerveza, vino, refrescos. Nada complicado, todo bueno.</p>
+                <p>Cerveza, vino, refrescos</p>
             </div>
             <div class="menu-item">
                 <h3>Txokroqueta</h3>
-                <p>Nuestra croqueta premiada. No te la pierdas.</p>
+                <p>Nuestra especialidad</p>
             </div>
         </div>
     </section>
 
-    <!-- Contact Info -->
-    <section class="section contact-info" id="contact">
-        <h2 class="section-title">Dónde Estamos</h2>
+    <!-- Contact -->
+    <section class="contact" id="contact">
+        <h2>Contacto</h2>
 
-        <div class="info-grid">
-            <div class="info-item">
-                <div class="info-label">Dirección</div>
-                <div class="info-value">Calle Loreto<br>03700 Dénia, Alicante</div>
+        <div class="contact-grid">
+            <div class="contact-item">
+                <div class="contact-label">Dirección</div>
+                <div class="contact-value">Calle Loreto<br>03700 Dénia</div>
             </div>
-
-            <div class="info-item">
-                <div class="info-label">Horario</div>
-                <div class="info-value">Consultar disponibilidad<br>Abierto todos los días</div>
+            <div class="contact-item">
+                <div class="contact-label">Horario</div>
+                <div class="contact-value">Todos los días</div>
             </div>
-
-            <div class="info-item">
-                <div class="info-label">Instagram</div>
-                <div class="info-value">
-                    <a href="https://www.instagram.com/txokobardenia/" target="_blank" rel="noopener">@txokobardenia</a>
+            <div class="contact-item">
+                <div class="contact-label">Instagram</div>
+                <div class="contact-value">
+                    <a href="https://www.instagram.com/txokobardenia/" target="_blank">@txokobardenia</a>
                 </div>
             </div>
-
-            <div class="info-item">
-                <div class="info-label">Facebook</div>
-                <div class="info-value">
-                    <a href="https://www.facebook.com/txokobardenia/" target="_blank" rel="noopener">Txoko Bar Denia</a>
+            <div class="contact-item">
+                <div class="contact-label">Facebook</div>
+                <div class="contact-value">
+                    <a href="https://www.facebook.com/txokobardenia/" target="_blank">Txoko Bar Denia</a>
                 </div>
             </div>
         </div>
 
-        <!-- Contact Form -->
-        <div class="contact-form">
-            <h3 class="form-title">Contáctanos</h3>
+        <!-- Form -->
+        <div class="form">
+            <h3>Escríbenos</h3>
             <form id="contactForm">
                 <div class="form-group">
                     <label for="nombre">Nombre</label>
                     <input type="text" id="nombre" name="nombre" required>
                 </div>
-
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" required>
                 </div>
-
                 <div class="form-group">
                     <label for="mensaje">Mensaje</label>
                     <textarea id="mensaje" name="mensaje" required></textarea>
                 </div>
-
-                <button type="submit" class="submit-btn" id="submitBtn">Enviar Mensaje</button>
-
-                <div class="form-message" id="formMessage"></div>
+                <button type="submit" id="submitBtn">Enviar</button>
+                <div class="message" id="formMessage"></div>
             </form>
         </div>
 
         <!-- Map -->
-        <div class="map-container">
-            <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3094.7682885366!2d0.10305431531913!3d38.84126897957!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd61e81c3b3b3b3b%3A0x1234567890abcdef!2sCarrer%20de%20Loreto%2C%2003700%20D%C3%A9nia%2C%20Alicante!5e0!3m2!1ses!2ses!4v1234567890"
-                width="100%"
-                height="100%"
-                style="border:0;"
-                allowfullscreen=""
-                loading="lazy">
-            </iframe>
-        </div>
+        <iframe class="map"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3094.7682885366!2d0.10305431531913!3d38.84126897957!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd61e81c3b3b3b3b%3A0x1234567890abcdef!2sCarrer%20de%20Loreto%2C%2003700%20D%C3%A9nia%2C%20Alicante!5e0!3m2!1ses!2ses!4v1234567890"
+            style="border:0"
+            allowfullscreen
+            loading="lazy">
+        </iframe>
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-logo">TXOKO BAR</div>
+    <footer>
+        <h2>TXOKO BAR</h2>
         <p>Calle Loreto, Dénia</p>
         <p>
-            <a href="https://www.instagram.com/txokobardenia/" target="_blank" rel="noopener">Instagram</a> |
-            <a href="https://www.facebook.com/txokobardenia/" target="_blank" rel="noopener">Facebook</a>
+            <a href="https://www.instagram.com/txokobardenia/" target="_blank">Instagram</a> |
+            <a href="https://www.facebook.com/txokobardenia/" target="_blank">Facebook</a>
         </p>
-        <p style="margin-top: 20px; opacity: 0.7; font-size: 0.85rem;">© 2025 Txoko Bar</p>
     </footer>
 
     <script>
-        // Contact Form Handler
         document.getElementById('contactForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const submitBtn = document.getElementById('submitBtn');
-            const formMessage = document.getElementById('formMessage');
+            const btn = document.getElementById('submitBtn');
+            const msg = document.getElementById('formMessage');
 
-            // Disable button
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'ENVIANDO...';
+            btn.disabled = true;
+            btn.textContent = 'ENVIANDO...';
+            msg.classList.remove('success', 'error');
+            msg.style.display = 'none';
 
-            // Hide previous messages
-            formMessage.classList.remove('success', 'error');
-            formMessage.style.display = 'none';
-
-            const formData = {
+            const data = {
                 nombre: document.getElementById('nombre').value,
                 email: document.getElementById('email').value,
                 mensaje: document.getElementById('mensaje').value
@@ -563,32 +471,29 @@
             try {
                 const response = await fetch('/txoko/contacto', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    formMessage.textContent = result.message;
-                    formMessage.classList.add('success');
-                    formMessage.style.display = 'block';
-                    // Clear form
+                    msg.textContent = result.message;
+                    msg.classList.add('success');
+                    msg.style.display = 'block';
                     document.getElementById('contactForm').reset();
                 } else {
-                    formMessage.textContent = result.message;
-                    formMessage.classList.add('error');
-                    formMessage.style.display = 'block';
+                    msg.textContent = result.message;
+                    msg.classList.add('error');
+                    msg.style.display = 'block';
                 }
             } catch (error) {
-                formMessage.textContent = 'Error al enviar el mensaje. Por favor, intenta de nuevo.';
-                formMessage.classList.add('error');
-                formMessage.style.display = 'block';
+                msg.textContent = 'Error. Intenta de nuevo.';
+                msg.classList.add('error');
+                msg.style.display = 'block';
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'ENVIAR MENSAJE';
+                btn.disabled = false;
+                btn.textContent = 'ENVIAR';
             }
         });
     </script>
