@@ -1131,14 +1131,14 @@ def contact_form():
     try:
         data = request.json
         logger.info(f"📧 Received contact form: {data}")
-        
+
         # Validate required fields
         if not data.get('nombre') or not data.get('email') or not data.get('mensaje'):
             return jsonify({
                 'success': False,
                 'message': 'Por favor completa todos los campos obligatorios'
             }), 400
-        
+
         # Get SendGrid API key
         sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
         if not sendgrid_api_key:
@@ -1147,11 +1147,11 @@ def contact_form():
                 'success': False,
                 'message': 'Error de configuración del servidor'
             }), 500
-        
+
         # Compose email message
         message = Mail(
             from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Tasca Les Monges'),
-            to_emails=To('lesmonges@hotmail.com'),  
+            to_emails=To('lesmonges@hotmail.com'),
             subject=f'📧 Consulta web - {data["nombre"]}',
             plain_text_content=f"""
 Nueva consulta desde el formulario de contacto:
@@ -1163,27 +1163,91 @@ Mensaje:
 {data['mensaje']}
 
 ---
-Para responder, simplemente contesta este email. 
+Para responder, simplemente contesta este email.
 Tu respuesta llegará automáticamente a {data['email']}.
             """
         )
-        
+
         # Set reply-to so you can just hit "Reply" and it goes to the customer
         message.reply_to = Email(data['email'], data['nombre'])
-        
+
         # Send via SendGrid
         sg = SendGridAPIClient(sendgrid_api_key)
         response = sg.send(message)
-        
+
         logger.info(f"✅ Email sent successfully! Status: {response.status_code}")
-        
+
         return jsonify({
             'success': True,
             'message': '¡Gracias por tu mensaje! Te responderemos pronto.'
         })
-        
+
     except Exception as e:
         logger.error(f"❌ Error processing contact form: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Error procesando el mensaje. Por favor, intenta de nuevo.'
+        }), 500
+
+@app.route('/txoko/contacto', methods=['POST'])
+def txoko_contact_form():
+    """Handle Txoko Bar contact form submission via SendGrid"""
+    try:
+        data = request.json
+        logger.info(f"📧 Received Txoko contact form: {data}")
+
+        # Validate required fields
+        if not data.get('nombre') or not data.get('email') or not data.get('mensaje'):
+            return jsonify({
+                'success': False,
+                'message': 'Por favor completa todos los campos obligatorios'
+            }), 400
+
+        # Get SendGrid API key
+        sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
+        if not sendgrid_api_key:
+            logger.error("❌ SENDGRID_API_KEY not configured!")
+            return jsonify({
+                'success': False,
+                'message': 'Error de configuración del servidor'
+            }), 500
+
+        # Compose email message
+        message = Mail(
+            from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Txoko Bar'),
+            to_emails=To('makarborisov123@gmail.com'),
+            subject=f'📧 Consulta Txoko Bar - {data["nombre"]}',
+            plain_text_content=f"""
+Nueva consulta desde el formulario de contacto de Txoko Bar:
+
+Nombre: {data['nombre']}
+Email: {data['email']}
+
+Mensaje:
+{data['mensaje']}
+
+---
+Para responder, simplemente contesta este email.
+Tu respuesta llegará automáticamente a {data['email']}.
+            """
+        )
+
+        # Set reply-to so you can just hit "Reply" and it goes to the customer
+        message.reply_to = Email(data['email'], data['nombre'])
+
+        # Send via SendGrid
+        sg = SendGridAPIClient(sendgrid_api_key)
+        response = sg.send(message)
+
+        logger.info(f"✅ Txoko email sent successfully! Status: {response.status_code}")
+
+        return jsonify({
+            'success': True,
+            'message': '¡Gracias por tu mensaje! Te responderemos pronto.'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error processing Txoko contact form: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Error procesando el mensaje. Por favor, intenta de nuevo.'
