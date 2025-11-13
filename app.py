@@ -1108,6 +1108,15 @@ def home():
 def index():
     return home()
 
+@app.route('/txoco-bar')
+def txoco_bar():
+    """Serve the Txoco Bar landing page"""
+    try:
+        with open('templates/txoco.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "txoco.html not found", 404
+
 @app.route('/contact', methods=['GET'])
 def contact_page():
     try:
