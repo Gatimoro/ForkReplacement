@@ -36,6 +36,8 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # Configuration
 DISCORD_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 DB_PATH = 'reservations.db'
+RESTAURANT_NAME = os.getenv('RESTAURANT_NAME', 'Les Monges')
+RESTAURANT_PHONE = os.getenv('RESTAURANT_PHONE', '965 78 57 31')
 
 # Channel IDs (set these after creating channels)
 CONFIRMED_CHANNEL_ID = int(os.getenv('CONFIRMED_CHANNEL_ID', '0'))
@@ -170,9 +172,10 @@ class ConfirmButton(Button):
             
             # Send SMS to customer
             message = (
-                f"¡Buenas noticias {res['nombre']}! "
-                f"Tu reserva para {res['personas']} personas el {fecha_display} "
-                f"a las {res['hora']} está CONFIRMADA. ¡Te esperamos! - Les Monges"
+                f"{res['nombre']}, RESERVA APROBADA (approved by restaurant)\n"
+                f"{fecha_display} {res['hora']}, {res['personas']} pers.\n"
+                f"¡Te esperamos! See you then!\n"
+                f"Cancelar: mismo enlace (cancel: same link)"
             )
             send_sms(res['telefono'], message)
             
@@ -245,7 +248,7 @@ class CancelModal(discord.ui.Modal, title="Confirmar Cancelación"):
             ''', (str(interaction.user), self.reservation_id))
             conn.commit()
             
-            # Log action
+            # Log action (sync function, no await)
             await log_action(
                 self.reservation_id,
                 'cancelled',
@@ -256,12 +259,12 @@ class CancelModal(discord.ui.Modal, title="Confirmar Cancelación"):
             # Format date for SMS
             fecha_display = format_date_spanish(res['fecha'])
             
-            # Send SMS to customer
+            # Send SMS to customer (sync function, no await)
             message = (
-                f"Hola {res['nombre']}, "
-                f"lamentamos informarte que tu reserva para {res['personas']} personas "
-                f"el {fecha_display} a las {res['hora']} ha sido cancelada. "
-                f"Por favor, contáctanos al 965 78 57 31. - Les Monges"
+                f"Lamentamos cancelar tu reserva (sorry, reservation cancelled), {res['nombre']}.\n"
+                f"{fecha_display} {res['hora']}, {res['personas']} pers.\n"
+                f"Motivo: {self.reason.value or 'Sin especificar'}\n"
+                f"Llámanos (call us): {RESTAURANT_PHONE}"
             )
             send_sms(res['telefono'], message)
             
