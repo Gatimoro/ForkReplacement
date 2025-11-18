@@ -28,7 +28,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.1);
             text-align: center;
-            max-width: 500px;
+            max-width: 550px;
             width: 100%;
             animation: slideIn 0.5s ease-out;
         }
@@ -45,10 +45,10 @@
         }
 
         .checkmark {
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             margin: 0 auto 30px;
-            background: #32cd32;
+            background: #8b9a7e;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -71,8 +71,8 @@
         }
 
         .checkmark svg {
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             stroke: white;
             stroke-width: 3;
             fill: none;
@@ -88,29 +88,83 @@
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             color: #2a2523;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-weight: 300;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #8b7d6b;
+            margin-bottom: 30px;
         }
 
         .message {
-            font-size: 1.2rem;
+            font-size: 1.15rem;
             color: #5a524b;
             margin-bottom: 15px;
-            line-height: 1.6;
+            line-height: 1.7;
         }
 
-        .highlight {
-            color: #32cd32;
-            font-weight: 500;
+        .step-box {
+            background-color: #f8f6f3;
+            border-left: 4px solid #8b9a7e;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: left;
+            border-radius: 5px;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background-color: #8b9a7e;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .step-text {
+            font-size: 1.1rem;
+            color: #3a3330;
+            margin-bottom: 15px;
+        }
+
+        .step-text:last-child {
+            margin-bottom: 0;
+        }
+
+        .important-note {
+            background-color: #fff9e6;
+            border: 1px solid #e6d89f;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            color: #5a524b;
+        }
+
+        .international-box {
+            background-color: #f0f7fb;
+            border: 1px solid #b8d9ea;
+            padding: 18px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-size: 0.98rem;
+            font-style: italic;
+            color: #4a5568;
         }
 
         .wave-decoration {
             width: 60px;
             height: 2px;
-            background-color: #32cd32;
+            background-color: #d4cfc8;
             margin: 30px auto;
             position: relative;
         }
@@ -121,7 +175,7 @@
             position: absolute;
             width: 20px;
             height: 2px;
-            background-color: #32cd32;
+            background-color: #d4cfc8;
             top: 0;
         }
 
@@ -147,40 +201,11 @@
         }
 
         .btn-home:hover {
-            background-color: #32cd32;
-            border-color: #32cd32;
+            background-color: #8b9a7e;
+            border-color: #8b9a7e;
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(50, 205, 50, 0.3);
-        }
-
-        .sms-animation {
-            margin: 30px 0;
-            font-size: 3rem;
-            animation: float 2s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .link-icon {
-            display: inline-block;
-            font-size: 1.3rem;
-            margin: 0 5px;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { 
-                transform: scale(1);
-                opacity: 1;
-            }
-            50% { 
-                transform: scale(1.1);
-                opacity: 0.8;
-            }
+            box-shadow: 0 5px 15px rgba(139, 154, 126, 0.3);
         }
 
         @media (max-width: 600px) {
@@ -189,11 +214,15 @@
             }
 
             h1 {
-                font-size: 2rem;
+                font-size: 1.8rem;
             }
 
-            .message {
-                font-size: 1.1rem;
+            .message, .step-text {
+                font-size: 1rem;
+            }
+
+            .step-box {
+                padding: 20px;
             }
         }
     </style>
@@ -206,24 +235,34 @@
             </svg>
         </div>
         
-        <h1>¡PERFECTO!</h1>
+        <h1>Solicitud Enviada</h1>
+        <p class="subtitle">Te hemos enviado un SMS</p>
         
         <div class="wave-decoration"></div>
         
-        <p class="message" id="mainMessage">
-            ¡Casi listo! Solo falta un paso más
+        <p class="message">
+            Revisa tu móvil y haz clic en el enlace para confirmar.<br>
+            <em style="font-size: 0.95em; color: #8b7d6b;">Check your phone and click the SMS link to confirm.</em>
         </p>
         
-        <div class="sms-animation">📱</div>
-        
-        <p class="message" id="actionMessage">
-            <strong>Revisa tu móvil</strong>
-        </p>
-        
-        <p class="message" id="instructionMessage">
-            Te acabamos de enviar un SMS con un enlace.<br>
-            Solo <span class="highlight">haz clic en el enlace</span> <span class="link-icon">🔗</span> y tu reserva estará confirmada ✨
-        </p>
+        <div class="step-box" id="stepsBox">
+            <div class="step-text">
+                <span class="step-number">1</span>
+                <strong>Revisa tu teléfono móvil</strong>
+            </div>
+            <div class="step-text">
+                <span class="step-number">2</span>
+                <strong>Haz clic en el enlace del SMS</strong>
+            </div>
+            <div class="step-text">
+                <span class="step-number">3</span>
+                <strong>Tu reserva quedará confirmada</strong>
+            </div>
+        </div>
+
+        <div class="important-note">
+            <strong>Importante:</strong> La reserva solo es válida después de confirmar mediante el enlace del SMS.
+        </div>
         
         <div class="wave-decoration"></div>
         
@@ -231,16 +270,28 @@
     </div>
     
     <script>
-        // Check if it's a large group reservation
         const urlParams = new URLSearchParams(window.location.search);
         const isLargeGroup = urlParams.get('large_group');
         const personas = urlParams.get('personas');
         
         if (isLargeGroup === 'true') {
-            // Update messages for large group
-            document.getElementById('mainMessage').innerHTML = `¡Genial! Un grupo de <span class="highlight">${personas} personas</span> 🎉`;
-            document.getElementById('actionMessage').innerHTML = '<strong>Confirma por SMS</strong>';
-            document.getElementById('instructionMessage').innerHTML = `Haz clic en el enlace <span class="link-icon">🔗</span> del SMS que te enviamos.<br>Revisaremos disponibilidad y te confirmamos enseguida 😊`;
+            document.querySelector('h1').textContent = 'Solicitud Recibida';
+            document.querySelector('.subtitle').textContent = `Grupo de ${personas} personas`;
+            
+            document.getElementById('stepsBox').innerHTML = `
+                <div class="step-text">
+                    <span class="step-number">1</span>
+                    <strong>Revisa tu teléfono móvil</strong>
+                </div>
+                <div class="step-text">
+                    <span class="step-number">2</span>
+                    <strong>Haz clic en el enlace del SMS</strong>
+                </div>
+                <div class="step-text">
+                    <span class="step-number">3</span>
+                    <strong>Revisaremos disponibilidad y te confirmaremos</strong>
+                </div>
+            `;
         }
     </script>
 </body>
