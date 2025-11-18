@@ -490,19 +490,19 @@ def create_reservation():
         # Prepare SMS message - MORE NATURAL
         if is_large:
             sms_message = (
-                f"Hola {data['nombre']}! "
-                f"Reserva para {personas} personas el {fecha_display} a las {data['hora']}. "
-                f"Confirma aquí: {confirmation_link} "
-                f"Revisaremos disponibilidad pronto. "
-                f"- {RESTAURANT_NAME}"
+                f"{data['nombre']}, CONFIRMA AQUÍ (confirm here):\n"
+                f"{confirmation_link}\n"
+                f"{fecha_display} {data['hora']} - {personas} pers.\n"
+                f"Revisaremos disponibilidad.\n"
+                f"Les Monges"
             )
         else:
             sms_message = (
-                f"Hola {data['nombre']}! "
-                f"Reserva {RESTAURANT_NAME} el {fecha_display} a las {data['hora']} ({personas} personas). "
-                f"Confirma aquí: {confirmation_link}"
+                f"{data['nombre']}, confirma tu reserva (confirm):\n"
+                f"{confirmation_link}\n"
+                f"{fecha_display} {data['hora']} - {personas} pers.\n"
+                f"Les Monges"
             )
-        
         # Send SMS
         sms_sent = send_sms(clean_phone, sms_message)
         
@@ -826,18 +826,19 @@ def confirm_reservation(token):
                 if is_large:
                     # SMS for large group - mention they'll be contacted
                     message = (
-                        f"Gracias por confirmar {reservation['nombre']}! "
-                        f"Tu solicitud para {reservation['personas']} personas está registrada. "
-                        f"Te contactaremos pronto para confirmar disponibilidad. "
-                        f"Puedes cancelar con este enlace si es necesario."
+                        f"Gracias {reservation['nombre']}!\n"
+                        f"Solicitud para {reservation['personas']} pers. recibida.\n"
+                        f"Te confirmaremos pronto.\n"
+                        f"Cancelar: mismo enlace (cancel: same link)"
                     )
                     logger.info(f"Large group {reservation['id']} SMS-confirmed, awaiting restaurant approval")
                 else:
                     # SMS for small group - confirmed! Mention cancellation link
                     message = (
-                        f"¡Perfecto {reservation['nombre']}! "
-                        f"Reserva confirmada el {fecha_display} a las {reservation['hora']}. "
-                        f"Les esperamos! Puedes cancelar con este mismo enlace si es necesario."
+                        f"¡Confirmado {reservation['nombre']}!\n"
+                        f"{fecha_display} {reservation['hora']}, {reservation['personas']} pers.\n"
+                        f"¡Te esperamos!\n"
+                        f"Cancelar: mismo enlace (cancel: same link)"
                     )
                     logger.info(f"Small group {reservation['id']} fully confirmed")
                 
@@ -1015,11 +1016,11 @@ def cancel_reservation(token):
             
             # Send cancellation SMS
             cancel_message = (
-                f"Hola {reservation['nombre']}, "
-                f"tu reserva para {reservation['personas']} personas "
-                f"el {fecha_display} a las {reservation['hora']} ha sido cancelada. "
-                f"Esperamos verte pronto. - {RESTAURANT_NAME}"
+                f"{reservation['nombre']}, reserva cancelada (reservation cancelled)\n"
+                f"{fecha_display} {reservation['hora']}, {reservation['personas']} pers.\n"
+                f"¡Esperamos verte pronto! Hope to see you soon!"
             )
+
             send_sms(reservation['telefono'], cancel_message)
             # Notify managers of cancellation
             manager_cancel_notif = (
@@ -1467,11 +1468,10 @@ def admin_cancel_reservation(reservation_id):
             # Send SMS notification
             fecha_display = format_date_spanish(reservation['fecha'])
             message = (
-                f"Hola {reservation['nombre']}, "
-                f"lamentamos informarte que tu reserva para {reservation['personas']} personas "
-                f"el {fecha_display} a las {reservation['hora']} ha sido cancelada. "
-                f"Motivo: {reason}. "
-                f"Por favor, contactanos al {RESTAURANT_PHONE}. - {RESTAURANT_NAME}"
+                f"Lamentamos cancelar tu reserva (sorry, reservation cancelled), {reservation['nombre']}.\n"
+                f"{fecha_display} {reservation['hora']}, {reservation['personas']} pers.\n"
+                f"Motivo: {reason}\n"
+                f"Llámanos (call us): {RESTAURANT_PHONE}"
             )
             send_sms(reservation['telefono'], message)
         
@@ -1526,9 +1526,10 @@ def admin_approve_reservation(reservation_id):
             # Send SMS notification
             fecha_display = format_date_spanish(reservation['fecha'])
             message = (
-                f"Buenas noticias {reservation['nombre']}! "
-                f"Tu reserva para {reservation['personas']} personas el {fecha_display} "
-                f"a las {reservation['hora']} esta CONFIRMADA. Te esperamos! - {RESTAURANT_NAME}"
+                f"{reservation['nombre']}, RESERVA APROBADA (approved by restaurant)\n"
+                f"{fecha_display} {reservation['hora']}, {reservation['personas']} pers.\n"
+                f"¡Te esperamos! See you then!\n"
+                f"Cancelar: mismo enlace (cancel: same link)"
             )
             send_sms(reservation['telefono'], message)
         
