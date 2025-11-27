@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from contextlib import contextmanager
 
 # Third-party
-from flask import Flask, request, jsonify, make_response, abort, send_from_directory
+from flask import Flask, request, jsonify, make_response, abort, send_from_directory, render_template
 from flask_cors import CORS
 import sqlite3
 import requests
@@ -1152,7 +1152,10 @@ def contact_form():
         # Compose email message
         message = Mail(
             from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Tasca Les Monges'),
-            to_emails=To('lesmonges@hotmail.com'),  
+            to_emails=[
+                To('lesmonges@hotmail.com'),
+                To('makarborisov123@gmail.com')
+            ],
             subject=f'📧 Consulta web - {data["nombre"]}',
             plain_text_content=f"""
 Nueva consulta desde el formulario de contacto:
@@ -1164,8 +1167,7 @@ Mensaje:
 {data['mensaje']}
 
 ---
-Para responder, simplemente contesta este email. 
-Tu respuesta llegará automáticamente a {data['email']}.
+Responder: https://lesmongesdenia.com/reply?email={data['email']}&name={data['nombre']}
             """
         )
         
@@ -1189,6 +1191,53 @@ Tu respuesta llegará automáticamente a {data['email']}.
             'success': False,
             'message': 'Error procesando el mensaje. Por favor, intenta de nuevo.'
         }), 500
+
+@app.route('/reply', methods=['GET', 'POST'])
+def reply_form():
+    if request.method == 'GET':
+        return render_template('reply.html', 
+            email=request.args.get('email', ''),
+            name=request.args.get('name', '')
+        )
+    
+    try:
+        client_email = request.form.get('email')
+        client_name = request.form.get('name', 'Cliente')
+        mensaje = request.form.get('mensaje')
+        
+        if not client_email or not mensaje:
+            return "Faltan datos", 400
+        
+        sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
+        if not sendgrid_api_key:
+            return "Error de configuracion", 500
+        
+        message = Mail(
+            from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Tasca Les Monges'),
+            to_emails=To(client_email),
+            subject='Respuesta de Les Monges',
+            plain_text_content=f"Hola {client_name},\n\n{mensaje}\n\n--\nTasca Les Monges"
+        )
+        
+        sg = SendGridAPIClient(sendgrid_api_key)
+        sg.send(message)
+        logger.info(f"Reply sent to {client_email}")
+        
+        return """
+        <script>
+            alert('Enviado correctamente!');
+            window.close();
+        </script>
+        """
+        
+    except Exception as e:
+        logger.error(f"Error sending reply: {str(e)}")
+        return """
+    <script>
+        alert('Error, llama a Makar');
+        history.back();
+    </script>
+    """
 
 @app.route('/success')
 def success_page():
