@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responder - Les Monges</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Georgia, serif;
+            background: #F5F1E8;
+            color: #5D4E47;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .card {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(93, 78, 71, 0.1);
+        }
+        h1 {
+            font-family: 'Dancing Script', cursive;
+            font-size: 2rem;
+            color: #8B9F6E;
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+        .info { background: #FFFBF5; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .info p { margin: 5px 0; }
+        textarea {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid rgba(139, 159, 110, 0.3);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 16px;
+            min-height: 200px;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+        textarea:focus { outline: none; border-color: #8B9F6E; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #8B9F6E;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:hover { background: #6B7A54; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Responder a cliente</h1>
+        <div class="info">
+            <p><strong>Para:</strong> {{ email }}</p>
+            <p><strong>Nombre:</strong> {{ name }}</p>
+        </div>
+	<form method="POST">
+	    <input type="hidden" name="email" value="{{ email }}">
+	    <input type="hidden" name="name" value="{{ name }}">
+	    <p style="color: #8D7B6F; margin-bottom: 5px;">Hola {{ name }},</p>
+	    <textarea name="mensaje" required placeholder="Escribe tu respuesta..."></textarea>
+	    <p style="color: #8D7B6F; margin-top: 5px;">--<br>Tasca Les Monges</p>
+	    <button type="submit" onclick="this.disabled=true; this.form.submit();">Enviar</button>
+	</form>
+    </div>
+</body>
+</html>
