@@ -63,14 +63,29 @@
             <p><strong>Para:</strong> {{ email }}</p>
             <p><strong>Nombre:</strong> {{ name }}</p>
         </div>
+	{% if original_msg %}
+	<div class="info" style="margin-bottom: 20px;">
+	    <p><strong>Mensaje original:</strong></p>
+	    <p style="white-space: pre-wrap;">{{ original_msg }}</p>
+	</div>
+	{% endif %}
 	<form method="POST">
 	    <input type="hidden" name="email" value="{{ email }}">
 	    <input type="hidden" name="name" value="{{ name }}">
+	    <input type="hidden" name="original_msg" value="{{ original_msg }}">
 	    <p style="color: #8D7B6F; margin-bottom: 5px;">Hola {{ name }},</p>
 	    <textarea name="mensaje" required placeholder="Escribe tu respuesta..."></textarea>
 	    <p style="color: #8D7B6F; margin-top: 5px;">--<br>Tasca Les Monges</p>
-	    <button type="submit" onclick="this.disabled=true; this.form.submit();">Enviar</button>
+	    <button type="submit">Enviar</button>
 	</form>
     </div>
 </body>
+
+<script>
+document.querySelector('form').addEventListener('submit', function() {
+    this.querySelector('button').disabled = true;
+    this.querySelector('button').textContent = 'Enviando...';
+});
+</script>
+
 </html>
