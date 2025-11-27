@@ -22,7 +22,7 @@ import requests
 from dotenv import load_dotenv
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, To, ReplyTo
-
+from urllib.parse import quote
 # Load environment variables
 load_dotenv()
 
@@ -1167,7 +1167,7 @@ Mensaje:
 {data['mensaje']}
 
 ---
-Responder: https://lesmongesdenia.com/reply?email={data['email']}&name={data['nombre']}
+Responder: https://lesmongesdenia.com/reply?email={quote(data['email'])}&name={quote(data['nombre'])}&msg={quote(data['mensaje'])}
             """
         )
         
@@ -1197,13 +1197,15 @@ def reply_form():
     if request.method == 'GET':
         return render_template('reply.html', 
             email=request.args.get('email', ''),
-            name=request.args.get('name', '')
+            name=request.args.get('name', ''),
+            original_msg=request.args.get('msg', '')
         )
     
     try:
         client_email = request.form.get('email')
         client_name = request.form.get('name', 'Cliente')
         mensaje = request.form.get('mensaje')
+        original_msg = request.form.get('original_msg', '')
         
         if not client_email or not mensaje:
             return "Faltan datos", 400
@@ -1216,7 +1218,7 @@ def reply_form():
             from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Tasca Les Monges'),
             to_emails=To(client_email),
             subject='Respuesta de Les Monges',
-            plain_text_content=f"Hola {client_name},\n\n{mensaje}\n\n--\nTasca Les Monges"
+            plain_text_content=f"Hola {client_name},\n\n{mensaje}\n\n--\nTasca Les Monges\n\n---\n\n Re:{original_msg}"
         )
         
         sg = SendGridAPIClient(sendgrid_api_key)
