@@ -952,10 +952,10 @@ def cancel_reservation(token):
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT * FROM reservations 
-                WHERE confirmation_token = ? 
+                SELECT * FROM reservations
+                WHERE confirmation_token = ?
                 AND cancelled = 0
-                AND date(fecha || ' ' || hora) >= datetime('now', 'localtime')
+                AND datetime(fecha || ' ' || hora) >= datetime('now', 'localtime')
             ''', (token,))
             
             reservation = cursor.fetchone()
