@@ -71,6 +71,9 @@ SMS_ENABLED = os.getenv('SMS_ENABLED', 'false').lower() == 'true'
 MENSATEK_API_USER = os.getenv('MENSATEK_API_USER', '')
 MENSATEK_API_TOKEN = os.getenv('MENSATEK_API_TOKEN', '')
 
+# Email Configuration
+EMAIL_ENABLED = os.getenv('EMAIL_ENABLED', 'false').lower() == 'true'
+
 # Business Logic
 LARGE_GROUP_THRESHOLD = int(os.getenv('LARGE_GROUP_THRESHOLD', '4'))
 DOMAIN = os.getenv('DOMAIN', 'http://localhost:5000/')
@@ -159,6 +162,18 @@ def init_database():
             UNIQUE(fecha, hora)
         )
     ''')
+
+    # Contact messages table (for Discord bot to read and display)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contact_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            email TEXT NOT NULL,
+            mensaje TEXT NOT NULL,
+            read BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     
     # Create index for fast lookups
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_blocked_hours_fecha ON blocked_hours(fecha)')
@@ -245,6 +260,54 @@ def send_sms(phone, message):
             
     except Exception as e:
         logger.error(f"SMS exception: {str(e)}")
+        return False
+
+def send_discord_contact_notification(nombre, email, mensaje):
+    """Send contact form notification to Discord webhook"""
+    if not DISCORD_CONTACT_WEBHOOK_URL:
+        logger.warning("Discord webhook URL not configured!")
+        return False
+
+    try:
+        # Create Discord embed with a copy button for email
+        embed = {
+            "title": "📩 Nuevo contacto de cliente",
+            "color": 15844367,  # Orange color
+            "fields": [
+                {
+                    "name": "Cliente",
+                    "value": nombre,
+                    "inline": False
+                },
+                {
+                    "name": "Email",
+                    "value": f"```{email}```",
+                    "inline": False
+                },
+                {
+                    "name": "Mensaje",
+                    "value": mensaje if len(mensaje) <= 1024 else mensaje[:1021] + "...",
+                    "inline": False
+                }
+            ],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        payload = {
+            "embeds": [embed]
+        }
+
+        response = requests.post(DISCORD_CONTACT_WEBHOOK_URL, json=payload, timeout=10)
+
+        if response.status_code in [200, 204]:
+            logger.info(f"✅ Discord notification sent for contact from {nombre}")
+            return True
+        else:
+            logger.error(f"Discord webhook failed with status {response.status_code}: {response.text}")
+            return False
+
+    except Exception as e:
+        logger.error(f"Discord webhook exception: {str(e)}")
         return False
 
 def save_default_hours_to_file():
@@ -1128,11 +1191,20 @@ def contact_page():
 
 @app.route('/contacto', methods=['POST'])
 def contact_form():
-    """Handle contact form submission via SendGrid"""
+    """Handle contact form submission via SendGrid and Discord"""
     try:
         data = request.json
         logger.info(f"📧 Received contact form: {data}")
-        
+
+        # Honeypot check - if 'website' field is filled, it's a bot
+        if data.get('website'):
+            logger.warning(f"🤖 Honeypot triggered! Bot detected from {data.get('email', 'unknown')}")
+            # Return success to fool the bot
+            return jsonify({
+                'success': True,
+                'message': '¡Gracias por tu mensaje! Te responderemos pronto.'
+            })
+
         # Validate required fields
         if not data.get('nombre') or not data.get('email') or not data.get('mensaje'):
             return jsonify({
@@ -1140,24 +1212,37 @@ def contact_form():
                 'message': 'Por favor completa todos los campos obligatorios'
             }), 400
         
-        # Get SendGrid API key
-        sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
-        if not sendgrid_api_key:
-            logger.error("❌ SENDGRID_API_KEY not configured!")
-            return jsonify({
-                'success': False,
-                'message': 'Error de configuración del servidor'
-            }), 500
-        
-        # Compose email message
-        message = Mail(
-            from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Tasca Les Monges'),
-            to_emails=[
-                To('lesmonges@hotmail.com'),
-                To('makarborisov123@gmail.com')
-            ],
-            subject=f'📧 Consulta web - {data["nombre"]}',
-            plain_text_content=f"""
+        # Store contact message in database for Discord bot
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO contact_messages (nombre, email, mensaje)
+                VALUES (?, ?, ?)
+            ''', (data['nombre'], data['email'], data['mensaje']))
+            conn.commit()
+            contact_id = cursor.lastrowid
+
+        logger.info(f"✅ Contact message stored in database (ID: {contact_id})")
+
+        # Send email only if EMAIL_ENABLED is true
+        if EMAIL_ENABLED:
+            sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
+            if not sendgrid_api_key:
+                logger.error("❌ SENDGRID_API_KEY not configured!")
+                return jsonify({
+                    'success': False,
+                    'message': 'Error de configuración del servidor'
+                }), 500
+
+            # Compose email message (without reply link)
+            message = Mail(
+                from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Tasca Les Monges'),
+                to_emails=[
+                    To('lesmonges@hotmail.com'),
+                    To('makarborisov123@gmail.com')
+                ],
+                subject=f'📧 Consulta web - {data["nombre"]}',
+                plain_text_content=f"""
 Nueva consulta desde el formulario de contacto:
 
 Nombre: {data['nombre']}
@@ -1165,21 +1250,20 @@ Email: {data['email']}
 
 Mensaje:
 {data['mensaje']}
+                """
+            )
 
----
-Responder: https://lesmongesdenia.com/reply?email={quote(data['email'])}&name={quote(data['nombre'])}&msg={quote(data['mensaje'])}
-            """
-        )
-        
-        # Set reply-to so you can just hit "Reply" and it goes to the customer
-        message.reply_to = Email(data['email'], data['nombre'])
-        
-        # Send via SendGrid
-        sg = SendGridAPIClient(sendgrid_api_key)
-        response = sg.send(message)
-        
-        logger.info(f"✅ Email sent successfully! Status: {response.status_code}")
-        
+            # Set reply-to so you can just hit "Reply" and it goes to the customer
+            message.reply_to = Email(data['email'], data['nombre'])
+
+            # Send via SendGrid
+            sg = SendGridAPIClient(sendgrid_api_key)
+            response = sg.send(message)
+
+            logger.info(f"✅ Email sent successfully! Status: {response.status_code}")
+        else:
+            logger.info(f"📧 Email disabled, message stored in database only")
+
         return jsonify({
             'success': True,
             'message': '¡Gracias por tu mensaje! Te responderemos pronto.'
@@ -1829,6 +1913,7 @@ logger.info(f"📱 SMS Enabled: {SMS_ENABLED}")
 if SMS_ENABLED:
     logger.info(f"   SMS User: {MENSATEK_API_USER}")
     logger.info(f"   Manager Phones: {os.getenv('MANAGER_PHONES', 'NOT SET')}")
+logger.info(f"📧 Email Enabled: {EMAIL_ENABLED}")
 logger.info(f"👥 Large Group Threshold: >{LARGE_GROUP_THRESHOLD} people")
 logger.info(f"🌐 Domain: {DOMAIN}")
 logger.info(f"🏪 Restaurant: {RESTAURANT_NAME}")

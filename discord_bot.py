@@ -44,7 +44,9 @@ CONFIRMED_CHANNEL_ID = int(os.getenv('CONFIRMED_CHANNEL_ID', '0'))
 PENDING_CHANNEL_ID = int(os.getenv('PENDING_CHANNEL_ID', '0'))
 TODAY_CHANNEL_ID = int(os.getenv('TODAY_CHANNEL_ID', '0'))
 LOG_CHANNEL_ID = int(os.getenv('LOG_CHANNEL_ID', '0'))
+CONTACT_CHANNEL_ID = int(os.getenv('CONTACT_CHANNEL_ID', '0'))
 last_checked_action_id = 0 #for 'real time' updates
+last_checked_contact_id = 0 #for contact form monitoring
 @contextmanager
 def get_db():
     """Database connection context manager"""
@@ -278,6 +280,96 @@ class CancelModal(discord.ui.Modal, title="Confirmar Cancelación"):
                 f"✅ Reserva #{self.reservation_id} cancelada y cliente notificado por SMS",
                 ephemeral=True
             )
+
+class CopyEmailButton(Button):
+    """Copy email button for contact messages"""
+    def __init__(self, email):
+        super().__init__(
+            style=discord.ButtonStyle.primary,
+            label="📋 Copiar email",
+            custom_id=f"copy_email_{email}"
+        )
+        self.email = email
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message(
+            f"📋 Email copiado:\n```{self.email}```\n\n"
+            f"_Usa Ctrl+C para copiar desde el cuadro de código arriba_",
+            ephemeral=True
+        )
+
+class MarkReadButton(Button):
+    """Mark as read button for contact messages"""
+    def __init__(self, contact_id):
+        super().__init__(
+            style=discord.ButtonStyle.secondary,
+            label="✓ Marcar como leído",
+            custom_id=f"mark_read_{contact_id}"
+        )
+        self.contact_id = contact_id
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Mark as read
+            cursor.execute('''
+                UPDATE contact_messages
+                SET read = 1
+                WHERE id = ?
+            ''', (self.contact_id,))
+            conn.commit()
+
+        # Delete the message
+        try:
+            await interaction.message.delete()
+        except:
+            pass
+
+        await interaction.followup.send(
+            f"✅ Mensaje #{self.contact_id} marcado como leído",
+            ephemeral=True
+        )
+
+def create_contact_embed(contact):
+    """Create Discord embed for a contact message matching notification.html style"""
+    # Orange color from notification.html: #f59e0b = 16162315 decimal
+    embed = discord.Embed(
+        title="📩 Nuevo contacto de cliente",
+        color=16162315,  # Orange (#f59e0b)
+        timestamp=datetime.strptime(contact['created_at'], '%Y-%m-%d %H:%M:%S')
+    )
+
+    # Cliente field
+    embed.add_field(
+        name="CLIENTE",
+        value=f"**{contact['nombre']}**",
+        inline=False
+    )
+
+    # Email field with code block for easy copying
+    embed.add_field(
+        name="EMAIL",
+        value=f"```{contact['email']}```",
+        inline=False
+    )
+
+    # Message field
+    mensaje = contact['mensaje']
+    if len(mensaje) > 1024:
+        mensaje = mensaje[:1021] + "..."
+
+    embed.add_field(
+        name="MENSAJE",
+        value=mensaje,
+        inline=False
+    )
+
+    embed.set_footer(text=f"Contacto web • ID #{contact['id']}")
+
+    return embed
 
 def create_reservation_embed(res, status_type):
     """Create Discord embed for a reservation - SIMPLIFIED"""
@@ -576,31 +668,43 @@ async def sync_all_channels():
 
 @bot.event
 async def on_ready():
-    global last_checked_action_id
-    
+    global last_checked_action_id, last_checked_contact_id
+
     print(f'✅ Bot conectado como {bot.user}')
     print(f'📊 Canales configurados:')
     print(f'   - Hoy: {TODAY_CHANNEL_ID}')
     print(f'   - Confirmadas: {CONFIRMED_CHANNEL_ID}')
     print(f'   - Pendientes: {PENDING_CHANNEL_ID}')
     print(f'   - Log: {LOG_CHANNEL_ID}')
-    
+    print(f'   - Contacto: {CONTACT_CHANNEL_ID}')
+
     # Initialize last_checked_action_id to latest action in DB
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT MAX(id) as max_id FROM action_log')
         result = cursor.fetchone()
         last_checked_action_id = result['max_id'] if result['max_id'] else 0
-    
+
+        # Initialize last_checked_contact_id to latest contact message in DB
+        cursor.execute('SELECT MAX(id) as max_id FROM contact_messages')
+        result = cursor.fetchone()
+        last_checked_contact_id = result['max_id'] if result['max_id'] else 0
+
     print(f'🔄 Iniciando sync en tiempo real desde action_log ID: {last_checked_action_id}')
-    
+    print(f'📧 Iniciando monitor de contactos desde ID: {last_checked_contact_id}')
+
     # Start periodic refresh (every 10 min as backup)
     if not refresh_task.is_running():
         refresh_task.start()
-    
+
     # Start real-time sync (every 5 seconds)
     if not realtime_sync_task.is_running():
         realtime_sync_task.start()
+
+    # Start contact monitor (every 5 seconds)
+    if CONTACT_CHANNEL_ID and not contact_monitor_task.is_running():
+        contact_monitor_task.start()
+        print(f'📩 Monitor de contactos iniciado')
 
 
 #SYNC LOOPS
@@ -642,6 +746,55 @@ async def realtime_sync_task():
     
     except Exception as e:
         logger.error(f"Error in real-time sync: {str(e)}")
+
+@tasks.loop(seconds=5)
+async def contact_monitor_task():
+    """Monitor for new contact messages and post to Discord"""
+    global last_checked_contact_id
+
+    if not CONTACT_CHANNEL_ID:
+        return
+
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Get new unread contact messages since last check
+            cursor.execute('''
+                SELECT * FROM contact_messages
+                WHERE id > ? AND read = 0
+                ORDER BY id ASC
+            ''', (last_checked_contact_id,))
+
+            new_contacts = cursor.fetchall()
+
+            if new_contacts:
+                logger.info(f"Found {len(new_contacts)} new contact messages")
+
+                channel = bot.get_channel(CONTACT_CHANNEL_ID)
+                if not channel:
+                    logger.error(f"Contact channel {CONTACT_CHANNEL_ID} not found!")
+                    return
+
+                for contact in new_contacts:
+                    # Create embed matching notification.html style
+                    embed = create_contact_embed(contact)
+
+                    # Create view with buttons
+                    view = View(timeout=None)
+                    view.add_item(CopyEmailButton(contact['email']))
+                    view.add_item(MarkReadButton(contact['id']))
+
+                    # Send to Discord
+                    await channel.send(embed=embed, view=view)
+
+                    logger.info(f"📩 Posted contact message #{contact['id']} to Discord")
+
+                    # Update last checked ID
+                    last_checked_contact_id = contact['id']
+
+    except Exception as e:
+        logger.error(f"Error in contact monitor: {str(e)}")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
