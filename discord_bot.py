@@ -339,10 +339,10 @@ def create_contact_embed(contact):
     source = contact.get('source', 'les_monges')
     if source == 'txoko':
         source_label = "TXOKO BAR"
-        color = 13211450  # Dark brown (#C9943A amber)
+        color = 4865072  # Dark brown (#4a3c30)
     else:
         source_label = "LES MONGES"
-        color = 16162315  # Orange (#f59e0b)
+        color = 9150318  # Sage green (#8b9f6e)
 
     embed = discord.Embed(
         title=f"📩 Nuevo contacto - {source_label}",
@@ -712,7 +712,9 @@ async def on_ready():
     # Start contact monitor (every 5 seconds)
     if CONTACT_CHANNEL_ID and not contact_monitor_task.is_running():
         contact_monitor_task.start()
-        print(f'📩 Monitor de contactos iniciado')
+        print(f'📩 Monitor de contactos iniciado - Canal: {CONTACT_CHANNEL_ID}')
+    elif not CONTACT_CHANNEL_ID:
+        print(f'⚠️ CONTACT_CHANNEL_ID no configurado - Contactos NO se enviarán a Discord')
 
 
 #SYNC LOOPS
@@ -761,6 +763,8 @@ async def contact_monitor_task():
     global last_checked_contact_id
 
     if not CONTACT_CHANNEL_ID:
+        logger.warning("⚠️ CONTACT_CHANNEL_ID not configured - contact messages won't be sent to Discord")
+        contact_monitor_task.stop()
         return
 
     try:
@@ -777,14 +781,17 @@ async def contact_monitor_task():
             new_contacts = cursor.fetchall()
 
             if new_contacts:
-                logger.info(f"Found {len(new_contacts)} new contact messages")
+                logger.info(f"📬 Found {len(new_contacts)} new contact message(s)")
 
                 channel = bot.get_channel(CONTACT_CHANNEL_ID)
                 if not channel:
-                    logger.error(f"Contact channel {CONTACT_CHANNEL_ID} not found!")
+                    logger.error(f"❌ Contact channel {CONTACT_CHANNEL_ID} not found! Check CONTACT_CHANNEL_ID in .env")
                     return
 
                 for contact in new_contacts:
+                    source = contact.get('source', 'les_monges')
+                    source_label = "TXOKO BAR" if source == 'txoko' else "LES MONGES"
+
                     # Create embed matching notification.html style
                     embed = create_contact_embed(contact)
 
@@ -796,13 +803,13 @@ async def contact_monitor_task():
                     # Send to Discord
                     await channel.send(embed=embed, view=view)
 
-                    logger.info(f"📩 Posted contact message #{contact['id']} to Discord")
+                    logger.info(f"📩 Posted contact #{contact['id']} from {source_label} ({contact['nombre']}) to Discord")
 
                     # Update last checked ID
                     last_checked_contact_id = contact['id']
 
     except Exception as e:
-        logger.error(f"Error in contact monitor: {str(e)}")
+        logger.error(f"❌ Error in contact monitor: {str(e)}")
 
 @bot.command()
 @commands.has_permissions(administrator=True)

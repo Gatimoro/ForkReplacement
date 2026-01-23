@@ -1126,9 +1126,9 @@ def home():
 def index():
     return home()
 
-@app.route('/txoco-bar')
-def txoco_bar():
-    """Serve the Txoco Bar landing page"""
+@app.route('/txoko-bar')
+def txoko_bar():
+    """Serve the Txoko Bar landing page"""
     try:
         with open('templates/txoco.html', 'r', encoding='utf-8') as f:
             return f.read()
