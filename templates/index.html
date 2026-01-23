@@ -1581,6 +1581,60 @@ filter: brightness(0) invert(1);
         </div>
     </section>
 
+    <!-- Contact Form Section -->
+    <section class="testimonials" id="escribenos">
+        <div class="section-header">
+            <h2>Escríbenos</h2>
+            <p class="handwritten-accent">Para cualquier consulta</p>
+        </div>
+        <div class="reservation-container vintage-card" style="max-width: 500px; margin: 0 auto;">
+            <div class="error-message" id="contactSuccessMessage" style="background-color: rgba(139, 159, 110, 0.2); border-color: var(--sage-green); color: var(--olive); display: none;">
+                Mensaje enviado correctamente. Te responderemos pronto.
+            </div>
+            <div class="error-message" id="contactErrorMessage"></div>
+
+            <form id="contactForm">
+                <!-- Honeypot -->
+                <div style="position: absolute; left: -9999px;">
+                    <input type="text" name="website" id="contact_website" tabindex="-1" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_nombre">Tu nombre</label>
+                    <input type="text" id="contact_nombre" name="nombre" required placeholder="Ej: María">
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_email">Email</label>
+                    <input type="email" id="contact_email" name="email" required placeholder="tu@email.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_mensaje">Mensaje</label>
+                    <textarea
+                        id="contact_mensaje"
+                        name="mensaje"
+                        rows="4"
+                        required
+                        placeholder="Escribe tu mensaje..."
+                        style="width: 100%; padding: 14px; border: 1px solid rgba(139, 159, 110, 0.3);
+                               border-radius: 6px; font-family: Georgia, serif; font-size: 1rem;
+                               background: white; resize: vertical; min-height: 100px;
+                               transition: all 0.3s ease; color: var(--warm-brown);"
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="submit-btn" id="contactSubmitBtn">
+                    Enviar Mensaje
+                </button>
+
+                <div class="security-badge">
+                    Te responderemos lo antes posible
+                </div>
+            </form>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-logo">Tasca Les Monges</div>
@@ -1854,6 +1908,62 @@ filter: brightness(0) invert(1);
                     this.style.opacity = '0';
                 }
             };
+        });
+
+        // Contact form handling
+        document.getElementById('contactForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const contactSubmitBtn = document.getElementById('contactSubmitBtn');
+            const contactSuccessMsg = document.getElementById('contactSuccessMessage');
+            const contactErrorMsg = document.getElementById('contactErrorMessage');
+
+            // Hide previous messages
+            contactSuccessMsg.style.display = 'none';
+            contactErrorMsg.classList.remove('show');
+
+            // Honeypot check
+            if (document.getElementById('contact_website').value) {
+                return;
+            }
+
+            // Disable button
+            contactSubmitBtn.disabled = true;
+            contactSubmitBtn.textContent = 'Enviando...';
+
+            const formData = {
+                nombre: document.getElementById('contact_nombre').value,
+                email: document.getElementById('contact_email').value,
+                mensaje: document.getElementById('contact_mensaje').value,
+                website: document.getElementById('contact_website').value,
+                source: 'les_monges'
+            };
+
+            try {
+                const response = await fetch('/contacto', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    contactSuccessMsg.style.display = 'block';
+                    this.reset();
+                } else {
+                    contactErrorMsg.textContent = result.message || 'Error al enviar el mensaje';
+                    contactErrorMsg.classList.add('show');
+                }
+            } catch (error) {
+                contactErrorMsg.textContent = 'Error de conexión. Inténtalo de nuevo.';
+                contactErrorMsg.classList.add('show');
+            } finally {
+                contactSubmitBtn.disabled = false;
+                contactSubmitBtn.textContent = 'Enviar Mensaje';
+            }
         });
     </script>
 </body>

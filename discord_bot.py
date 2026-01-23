@@ -335,10 +335,18 @@ class MarkReadButton(Button):
 
 def create_contact_embed(contact):
     """Create Discord embed for a contact message matching notification.html style"""
-    # Orange color from notification.html: #f59e0b = 16162315 decimal
+    # Determine source and styling
+    source = contact.get('source', 'les_monges')
+    if source == 'txoko':
+        source_label = "TXOKO BAR"
+        color = 13211450  # Dark brown (#C9943A amber)
+    else:
+        source_label = "LES MONGES"
+        color = 16162315  # Orange (#f59e0b)
+
     embed = discord.Embed(
-        title="📩 Nuevo contacto de cliente",
-        color=16162315,  # Orange (#f59e0b)
+        title=f"📩 Nuevo contacto - {source_label}",
+        color=color,
         timestamp=datetime.strptime(contact['created_at'], '%Y-%m-%d %H:%M:%S')
     )
 
@@ -367,7 +375,7 @@ def create_contact_embed(contact):
         inline=False
     )
 
-    embed.set_footer(text=f"Contacto web • ID #{contact['id']}")
+    embed.set_footer(text=f"{source_label} • ID #{contact['id']}")
 
     return embed
 

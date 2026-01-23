@@ -170,6 +170,7 @@ def init_database():
             nombre TEXT NOT NULL,
             email TEXT NOT NULL,
             mensaje TEXT NOT NULL,
+            source TEXT DEFAULT 'les_monges',
             read BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -260,54 +261,6 @@ def send_sms(phone, message):
             
     except Exception as e:
         logger.error(f"SMS exception: {str(e)}")
-        return False
-
-def send_discord_contact_notification(nombre, email, mensaje):
-    """Send contact form notification to Discord webhook"""
-    if not DISCORD_CONTACT_WEBHOOK_URL:
-        logger.warning("Discord webhook URL not configured!")
-        return False
-
-    try:
-        # Create Discord embed with a copy button for email
-        embed = {
-            "title": "📩 Nuevo contacto de cliente",
-            "color": 15844367,  # Orange color
-            "fields": [
-                {
-                    "name": "Cliente",
-                    "value": nombre,
-                    "inline": False
-                },
-                {
-                    "name": "Email",
-                    "value": f"```{email}```",
-                    "inline": False
-                },
-                {
-                    "name": "Mensaje",
-                    "value": mensaje if len(mensaje) <= 1024 else mensaje[:1021] + "...",
-                    "inline": False
-                }
-            ],
-            "timestamp": datetime.utcnow().isoformat()
-        }
-
-        payload = {
-            "embeds": [embed]
-        }
-
-        response = requests.post(DISCORD_CONTACT_WEBHOOK_URL, json=payload, timeout=10)
-
-        if response.status_code in [200, 204]:
-            logger.info(f"✅ Discord notification sent for contact from {nombre}")
-            return True
-        else:
-            logger.error(f"Discord webhook failed with status {response.status_code}: {response.text}")
-            return False
-
-    except Exception as e:
-        logger.error(f"Discord webhook exception: {str(e)}")
         return False
 
 def save_default_hours_to_file():
@@ -413,9 +366,9 @@ def log_action(reservation_id, action_type, performed_by, details=None):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO action_log (reservation_id, action_type, performed_by, details)
-            VALUES (?, ?, ?, ?)
-        ''', (reservation_id, action_type, performed_by, details))
+            INSERT INTO action_log (reservation_id, action_type, performed_by, details, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (reservation_id, action_type, performed_by, details, now().strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
 
 def get_blocked_hours_for_date(fecha_str):
@@ -522,11 +475,11 @@ def create_reservation():
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO reservations 
-                (nombre, telefono, personas, fecha, hora, 
-                 user_confirmed, restaurant_confirmed, 
-                 confirmation_token, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO reservations
+                (nombre, telefono, personas, fecha, hora,
+                 user_confirmed, restaurant_confirmed,
+                 confirmation_token, notes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['nombre'],
                 clean_phone,
@@ -536,7 +489,8 @@ def create_reservation():
                 0,  # user_confirmed = False (MUST click SMS link first)
                 0 if is_large else 1,  # restaurant_confirmed based on group size
                 confirmation_token,
-                data.get('notes','')
+                data.get('notes',''),
+                now().strftime('%Y-%m-%d %H:%M:%S')
             ))
             conn.commit()
             reservation_id = cursor.lastrowid
@@ -1058,12 +1012,12 @@ def cancel_reservation(token):
             
             # Cancel the reservation
             cursor.execute('''
-                UPDATE reservations 
-                SET cancelled = 1, 
-                    cancelled_at = CURRENT_TIMESTAMP, 
+                UPDATE reservations
+                SET cancelled = 1,
+                    cancelled_at = ?,
                     cancelled_by = 'customer'
                 WHERE id = ?
-            ''', (reservation['id'],))
+            ''', (now().strftime('%Y-%m-%d %H:%M:%S'), reservation['id']))
             conn.commit()
             
             # Log action
@@ -1213,12 +1167,13 @@ def contact_form():
             }), 400
         
         # Store contact message in database for Discord bot
+        source = data.get('source', 'les_monges')
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO contact_messages (nombre, email, mensaje)
-                VALUES (?, ?, ?)
-            ''', (data['nombre'], data['email'], data['mensaje']))
+                INSERT INTO contact_messages (nombre, email, mensaje, source, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (data['nombre'], data['email'], data['mensaje'], source, now().strftime('%Y-%m-%d %H:%M:%S')))
             conn.commit()
             contact_id = cursor.lastrowid
 
@@ -1276,65 +1231,12 @@ Mensaje:
             'message': 'Error procesando el mensaje. Por favor, intenta de nuevo.'
         }), 500
 
-@app.route('/reply', methods=['GET', 'POST'])
-def reply_form():
-    if request.method == 'GET':
-        return render_template('reply.html', 
-            email=request.args.get('email', ''),
-            name=request.args.get('name', ''),
-            original_msg=request.args.get('msg', '')
-        )
-    
-    try:
-        client_email = request.form.get('email')
-        client_name = request.form.get('name', 'Cliente')
-        mensaje = request.form.get('mensaje')
-        original_msg = request.form.get('original_msg', '')
-        
-        if not client_email or not mensaje:
-            return "Faltan datos", 400
-        
-        sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
-        if not sendgrid_api_key:
-            return "Error de configuracion", 500
-        
-        message = Mail(
-            from_email=Email('noreply@em9835.email.lesmongesdenia.com', 'Tasca Les Monges'),
-            to_emails=To(client_email),
-            subject='Respuesta de Les Monges',
-            plain_text_content=f"Hola {client_name},\n\n{mensaje}\n\n--\nTasca Les Monges\n\n---\n\n Re:{original_msg}"
-        )
-        
-        sg = SendGridAPIClient(sendgrid_api_key)
-        sg.send(message)
-        logger.info(f"Reply sent to {client_email}")
-        
-        return """
-        <script>
-            alert('Enviado correctamente!');
-            window.close();
-        </script>
-        """
-        
-    except Exception as e:
-        logger.error(f"Error sending reply: {str(e)}")
-        return """
-    <script>
-        alert('Error, llama a Makar');
-        history.back();
-    </script>
-    """
-
 @app.route('/success')
 def success_page():
     """Serve the success page"""
     try:
-        try:
-            with open('templates/success.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            with open('success.html', 'r', encoding='utf-8') as f:
-                return f.read()
+        with open('templates/success.html', 'r', encoding='utf-8') as f:
+            return f.read()
     except FileNotFoundError:
         return "success.html not found", 404
 
@@ -1342,12 +1244,8 @@ def success_page():
 def error_page():
     """Serve the error page"""
     try:
-        try:
-            with open('templates/error.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            with open('error.html', 'r', encoding='utf-8') as f:
-                return f.read()
+        with open('templates/error.html', 'r', encoding='utf-8') as f:
+            return f.read()
     except FileNotFoundError:
         return "error.html not found", 404
 
@@ -1355,12 +1253,8 @@ def error_page():
 def admin_page():
     """Serve the admin panel"""
     try:
-        try:
-            with open('templates/admin.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            with open('admin.html', 'r', encoding='utf-8') as f:
-                return f.read()
+        with open('templates/admin.html', 'r', encoding='utf-8') as f:
+            return f.read()
     except FileNotFoundError:
         return "admin.html not found", 404
 
@@ -1582,12 +1476,12 @@ def admin_cancel_reservation(reservation_id):
             
             # Cancel it
             cursor.execute('''
-                UPDATE reservations 
+                UPDATE reservations
                 SET cancelled = 1,
-                    cancelled_at = CURRENT_TIMESTAMP,
+                    cancelled_at = ?,
                     cancelled_by = ?
                 WHERE id = ?
-            ''', ('admin', reservation_id))
+            ''', (now().strftime('%Y-%m-%d %H:%M:%S'), 'admin', reservation_id))
             conn.commit()
             
             # Log action
